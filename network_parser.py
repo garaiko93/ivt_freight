@@ -1,26 +1,17 @@
-import gzip
 import bz2file
 import re
 import pandas as pd
 from tqdm import tqdm_notebook
-import numpy as np
 import pickle
 import geopandas as gpd
 import shapely.geometry as geo
-from collections import defaultdict
-import smtplib
-from email import message
-import time
-import datetime
 import csv
 import os
-from sklearn.neighbors import KDTree
-from shapely.geometry import shape
 from functools import partial
 import pyproj
 from shapely.ops import transform
 from shapely.geometry import Point, Polygon,LineString,LinearRing, MultiPoint
-
+from pyproj import Transformer
 
 def ms_func(tag_value, ms_strings):
     # this function filters/cleans/converts the content of the maximum speed tag in the 'ways' elements
@@ -35,21 +26,16 @@ def ms_func(tag_value, ms_strings):
 
     if tag_value not in ms_strings:
         ms_strings.append(tag_value)
-    return copy_speed
+    return copy_speed, ms_strings
 
-def split_ways(init_pos, nd_pos, way_id, count_id, copy_nodes):
+def split_ways(way_id, count_id, copy_nodes, ways_dict, splitted_ways_dict, splitted_ways):
     new_wayid = '_'.join([str(way_id), str(count_id)])
 
     start_node_id = copy_nodes[0]
-    # start_latlon = nodes_europe[start_node_id]
-    # start_x = start_latlon[0]
-    # start_y = start_latlon[1]
-
     end_node_id = copy_nodes[len(copy_nodes) - 1]
-    # end_latlon = nodes_europe[end_node_id]
-    # end_x = end_latlon[0]
-    # end_y = end_latlon[1]
-    # data format is the same as in ways_dict, only changes the way_id and the list of nodes composing the way (if it is crossed by another way, if not everything stays the same)
+
+    # data format is the same as in ways_dict, only changes the way_id and the list of nodes composing the way
+    # (if it is crossed by another way, if not everything stays the same)
     way_type = ways_dict[way_id][0]
     way_maxspeed = ways_dict[way_id][1]
     way_maxspeed_f = ways_dict[way_id][3]
@@ -68,8 +54,28 @@ def split_ways(init_pos, nd_pos, way_id, count_id, copy_nodes):
         new_wayid, int(way_id), float(count_id), int(start_node_id), int(end_node_id), str(way_type),
         way_maxspeed, copy_nodes, way_maxspeed_f, way_maxspeed_b, speed_val, oneway, lanes, lanes_f, lanes_b
     ))
+    return splitted_ways_dict, splitted_ways
 
-def parse_network(raw_file, shp_path, out_path):
+def lonlat_funct(new_id,nodes_list, nodes_europe, splitted_ways_dict):
+    nodes_lonlat = []
+    for i in nodes_list:
+        nodes_lonlat.append(nodes_europe[int(i)])
+    splitted_ways_dict[new_id].append(nodes_lonlat)
+    return nodes_lonlat
+
+def ls_func(nodes_lonlat):
+    line = geo.LineString(nodes_lonlat)
+    return line
+
+def length_func(line):
+    line_length = line.length
+    return line_length
+
+def way_time_func(maxspeed,length):
+    way_time = float(length)/(float(maxspeed)*1000/3600)
+    return way_time
+
+def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
     raw_file = 'C:/Users/Ion/IVT/OSM_data'
     shp_path = 'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border'
     out_path = 'C:/Users/Ion/IVT/OSM_python/test'
@@ -85,23 +91,22 @@ def parse_network(raw_file, shp_path, out_path):
     # -----------------------------------------------------------------------------
     # SPLIT OSM FILE IN FILES FOR: NODES, WAYS AND RELATIONS
     # -----------------------------------------------------------------------------
-    node_check = 0
-    way_check = 0
-    relation_check = 0
-    lines_nodes = 0
-    lines_ways = 0
-    lines_relations = 0
-    lines_europe = 0
-
     # by reading the selected file line by line, for each xml element type this code splits the 3 of them in 3 different files for: NODES, WAYS and RELATIONS elements
     if os.path.isfile(str(out_path) + "\europe-latest_nodes.osm.bz2") == False and \
             os.path.isfile(str(out_path) + "\europe-latest_ways.osm.bz2") == False and \
             os.path.isfile(str(out_path) + "\europe-latest_relations.osm.bz2") == False:
+        node_check = 0
+        way_check = 0
+        relation_check = 0
+        lines_nodes = 0
+        lines_ways = 0
+        lines_relations = 0
+        lines_europe = 0
         with bz2file.open(str(raw_file) + "/" + str(osm_file) + "-latest.osm.bz2") as f:
             with bz2file.open(str(out_path) + "\europe-latest_nodes.osm.bz2", 'wb') as f1:
                 with bz2file.open(str(out_path) + "\europe-latest_ways.osm.bz2", 'wb') as f2:
                     with bz2file.open(str(out_path) + "\europe-latest_relations.osm.bz2", 'wb') as f3:
-                        for line in tqdm_notebook(f):
+                        for line in f:
                             lines_europe += 1
                             if b"<node" in line:
                                 f1.write(line)
@@ -122,6 +127,12 @@ def parse_network(raw_file, shp_path, out_path):
                                 lines_relations += 1
                                 if b"</relation>" in line:
                                     relation_check = 0
+        print('Raw OSM file splitted into nodes-ways-relations files correctly')
+        print('------------------------------------------------------------------------')
+    else:
+        print('Splitted files already exist in out_path')
+        print('------------------------------------------------------------------------')
+
     # -----------------------------------------------------------------------------
     # WAYS
     # -----------------------------------------------------------------------------
@@ -169,12 +180,12 @@ def parse_network(raw_file, shp_path, out_path):
                             if tag_name == 'highway':
                                 way_type = str(tag_value)
                             elif tag_name == 'maxspeed':
-                                way_maxspeed, ms_strings = ms_func(tag_value, ms_strings)
+                                [way_maxspeed, ms_strings] = ms_func(tag_value, ms_strings)
                                 speed_val = tag_value
                             elif tag_name == 'maxspeed:forward':
-                                way_maxspeed_f, ms_strings = ms_func(tag_value, ms_strings)
+                                [way_maxspeed_f, ms_strings] = ms_func(tag_value, ms_strings)
                             elif tag_name == 'maxspeed:backward':
-                                way_maxspeed_b, ms_strings = ms_func(tag_value, ms_strings)
+                                [way_maxspeed_b, ms_strings] = ms_func(tag_value, ms_strings)
                             elif tag_name == 'lanes':
                                 lanes = tag_value
                             elif tag_name == 'lanes:forward':
@@ -267,39 +278,47 @@ def parse_network(raw_file, shp_path, out_path):
         # EXPORT ways_dict TO FILE
         with open(str(out_path) + '/europe_ways_dict' + '.pkl', 'wb') as f:
             pickle.dump(ways_dict, f, pickle.HIGHEST_PROTOCOL)
+
+        print('Ways parsed succesfully: ' + str(len(ways_dict)))
+        print('------------------------------------------------------------------------')
     else:
         file = open(str(out_path) + "/europe_ways_dict.pkl", 'rb')
         ways_dict = pickle.load(file)
 
+        print('Ways_dict already exists in out_path, loaded: ' + str(len(ways_dict)))
+        print('------------------------------------------------------------------------')
+
     # -----------------------------------------------------------------------------
     # NODES
     # -----------------------------------------------------------------------------
+    geo_restrict = False
     if os.path.isfile(str(out_path) + "/europe_nodes_dict2056.pkl") == False:
-        ch_border30k = gpd.read_file(
-            str(shp_path) + "/bci_polygon30k_4326.shp")
+        if geo_restrict == True:
+            ch_border30k = gpd.read_file(
+                str(shp_path) + "/bci_polygon30k_4326.shp")
         nodes_europe = {}
         i = 0
-
         with bz2file.open(str(out_path) + "/europe-latest_nodes.osm.bz2") as f:
             #     reading line by line the 'nodes' file created at the beginning, data for each node fulfilling the conditions are stored for the output
-            for line in tqdm_notebook(f, total=lines_nodes):
+            for line in f:
                 if b"<node" in line:
                     # records the attributes of the element: node_id, latitude and longitude
                     m = re.search(rb'id="(.+)" lat="([+-]?\d+(?:\.\d+)?)" lon="([+-]?\d+(?:\.\d+)?)"', line)
                     #             m = re.search(rb'id="(.+)" lat="([0-9.]+)" lon="([0-9.]+)"', line)
                     if m is not None:
-                        #         this is done to take only nodes that are contained in the ways filtered in the previous step
-                        #         and taking into account that nodes ids are sorted in the OSM file
+                        # this is done to take only nodes that are contained in the ways filtered in the previous step
+                        # and taking into account that nodes ids are sorted in the OSM file
                         node_sel = nodes_of_ways[i]
                         id = m.group(1).decode('utf-8')
                         if node_sel == id:
-                            lonlat = float(m.group(3)), float(m.group(2))
+                            lonlat = float(m.group(2)), float(m.group(3))
                             # activate this(next 3 lines) if location constrain wants to be set to nodes filtering
-                            in_ch = ch_border30k.contains(Point(lonlat))
-                            if in_ch[0] == True:
+                            if geo_restrict == True:
+                                in_ch = ch_border30k.contains(Point(lonlat))
+                                if in_ch[0] == True:
+                                    nodes_europe[int(id)] = lonlat
+                            else:
                                 nodes_europe[int(id)] = lonlat
-                                # desactivate this(next 1 line) if location constrain is not needed
-                                #                 nodes_europe[int(id)] = lonlat
                             # ------------------
                             if i < len(nodes_of_ways) - 1:
                                 while node_sel == id:
@@ -316,44 +335,56 @@ def parse_network(raw_file, shp_path, out_path):
             point4326 = Point(nodes_europe[node])
             project = partial(
                 pyproj.transform,
-                pyproj.Proj(init='epsg:4326'),
-                pyproj.Proj(init='epsg:2056'))
+                pyproj.Proj('epsg:4326'),
+                pyproj.Proj('epsg:2056'))
             point2056 = transform(project, point4326)
             nodes_europe_2056[node] = (point2056.x, point2056.y)
+
+        # transformer = Transformer.from_crs("epsg:4326", "epsg:2056")
+        # transformer.transform(47.1697019, 9.4931778)
+
         # EXPORT nodes_europe TO FILE
         with open(str(out_path) + '/europe_nodes_dict2056.pkl', 'wb') as f:
             pickle.dump(nodes_europe_2056, f, pickle.HIGHEST_PROTOCOL)
+        print('Nodes parsed succesfully: ' + str(len(nodes_europe_2056)))
+        print('------------------------------------------------------------------------')
     else:
         file = open(str(out_path) + "/europe_nodes_dict2056.pkl", 'rb')
         nodes_europe_2056 = pickle.load(file)
 
+        print('Nodes_europe_2056 already exist in out_path, loaded: ' + str(len(nodes_europe_2056)))
+        print('------------------------------------------------------------------------')
+
     # DELETE WAYS WHICH ARE NOT INSIDE swissborder 30k (if only one node of the way is inside it is kept)
-    if os.path.isfile(str(out_path) + "/europe_Sways_dict.pkl") == False:
+    if os.path.isfile(str(out_path) + "/europe_filteredways_dict.pkl") == False and \
+            geo_restrict == True:
         for wayid in list(ways_dict):
             nodes_list = ways_dict[wayid][2]
             for node in nodes_list:
                 try:
-                    Point(nodes_europe_2056[node])
+                    nodes_europe_2056[int(node)]
                 except:
                     del ways_dict[wayid]
                     break
                     # continue
-
         #EXPORT ways_dict TO FILE
-        with open(str(out_path)+'\europe_Sways_dict.pkl', 'wb') as f:
+        with open(str(out_path)+'/europe_filteredways_dict.pkl', 'wb') as f:
             pickle.dump(ways_dict, f, pickle.HIGHEST_PROTOCOL)
+        print('New ways in geo area parsed: ' + str(len(ways_dict)))
+        print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
     # SPLIT WAYS
     # -----------------------------------------------------------------------------
-    if os.path.isfile(str(out_path) + "/europe_ways_splitted_dict.pkl") == False:
+    if os.path.isfile(str(out_path) + "/europe_ways_splitted_dict.pkl") == False \
+            or os.path.isfile(str(out_path) + "/europe_ways_splitted.csv") == False:
     # Create dictionary that counts which nodes are part of 2 or more ways and specify how many times (i.e. node_id 1 : is in 3 ways)
         nodes_repeated = {}
         allnodes_count = {}
-        waysid_per_node = {}
+        # waysid_per_node = {}
 
         for way in ways_dict:
-            nodesway_list = []
+            # nodesway_list = []
             ways_data = ways_dict[way][2]
             for check_node in ways_data:
                 if check_node in nodes_repeated:
@@ -370,7 +401,7 @@ def parse_network(raw_file, shp_path, out_path):
         # Creates a dictinoary ('crossing_ways') with all the ways in which a node is included ( i.e. node_id: way_id1, way_id2, way_id3,...)
         in_ways_id = {}
         crossing_ways = {}
-        ways_list = []
+        # ways_list = []
 
         for way_id in ways_dict:
             nodes_list = ways_dict[way_id][2]
@@ -401,6 +432,9 @@ def parse_network(raw_file, shp_path, out_path):
                 else:
                     if way not in crossing_nodes:
                         crossing_nodes[way] = []
+
+        splitted_ways_dict = {}
+        splitted_ways = []
         for way_id in ways_dict:
             nodes_list = ways_dict[way_id][2]
             num_nd = len(nodes_list)
@@ -418,85 +452,76 @@ def parse_network(raw_file, shp_path, out_path):
                     if nd_pos > 0 and nd_pos < num_nd:
                         new_nodes = nodes_list[init_pos:(nd_pos + 1)]
                         init_pos = nd_pos
-                        split_ways(init_pos, nd_pos, way_id, count_id, new_nodes)
+                        splitted_ways_dict, splitted_ways = split_ways(way_id, count_id, new_nodes,
+                                                                       ways_dict, splitted_ways_dict, splitted_ways)
                         count_id += 1
                     elif (nd_pos == 0 or nd_pos == num_nd) and len(crossing_nodes[way_id]) == (
                             list(crossing_nodes[way_id]).index(i) + 1):
                         nd_pos = num_nd
                         new_nodes = nodes_list[init_pos:(nd_pos + 1)]
-                        split_ways(init_pos, nd_pos, way_id, count_id, new_nodes)
+                        splitted_ways_dict, splitted_ways = split_ways(way_id, count_id, new_nodes,
+                                                                       ways_dict, splitted_ways_dict, splitted_ways)
                         count_id += 1
             elif num_nd > 1:
-                split_ways(init_pos, nd_pos, way_id, count_id, nodes_list)
+                splitted_ways_dict, splitted_ways = split_ways(way_id, count_id, nodes_list,
+                                                               ways_dict, splitted_ways_dict, splitted_ways)
 
         # EXPORT splitted_ways_dict INTO FILE
         with open(str(out_path) + '/europe_ways_splitted_dict' + '.pkl', 'wb') as f:
             pickle.dump(splitted_ways_dict, f, pickle.HIGHEST_PROTOCOL)
 
-        # EXPORT ways_europe TO FILE
-        europe_ways_df = pd.DataFrame.from_records(ways, columns=[
-            "way_id", "start_node_id", "end_node_id", "list of nodes", "way_type", "way_maxspeed"
+        # Add coordinates of every node forming a way, not only start and end points
+        # and create LINESTRING with all the nodes in the way, not only start and end nodes
+        # Export to a csv file
+        splitted_ways_df = pd.DataFrame.from_records(splitted_ways, columns=[
+            "new_id", "way_id", "count_id", "start_node_id", "end_node_id", "way_type",
+            "maxspeed(km/h)", "nodes_list", "maxs_f", "maxs_b", "speed_val", "oneway", "lanes", "lanes_f", "lanes_b"
         ])
-        europe_ways_df.to_csv(str(out_path) + "\europe_ways.csv", sep=",", index=None)
+        splitted_ways_df['nodes_lonlat'] = splitted_ways_df.apply(
+            lambda row: lonlat_funct(row['new_id'], row['nodes_list'], nodes_europe_2056, splitted_ways_dict), axis=1)
+        splitted_ways_df['geometry'] = splitted_ways_df.apply(
+            lambda row: ls_func(row['nodes_lonlat']), axis=1)
+
+        splitted_ways_df.to_csv(str(out_path) + "\europe_splitted_ways.csv", sep=",", index=None)
+        print('Splitted ways files created: ' + str(len(splitted_ways_df)))
+        print('------------------------------------------------------------------------')
     else:
         # IMPORT splitted_ways_dict
-        file = open("europe_ways_splitted_dict.pkl",'rb')
+        file = open(str(out_path) + '/europe_ways_splitted_dict.pkl','rb')
         splitted_ways_dict = pickle.load(file)
         file.close()
 
         #splitted_ways
-        with open('splitted_MTP_europe1.csv', 'r') as f:
+        with open(str(out_path) + '/europe_splitted_ways.csv', 'r') as f:
             reader = csv.reader(f)
-        splitted_ways = list(reader)
+        splitted_ways_df = list(reader)
 
-#Add coordinates of every node forming a way, not only start and end points
-#and create LINESTRING with all the nodes in the way, not only start and end nodes
-def lonlat_funct(new_id,nodes_list):
-    nodes_lonlat = []
-    for i in nodes_list:
-        nodes_lonlat.append(nodes_europe[i])
-#     splitted_ways_dict[new_id].append(nodes_lonlat)
-    return nodes_lonlat
+        print('Splitted ways already exist in out_path, loaded: ' +str(len(splitted_ways_dict)))
+        print('------------------------------------------------------------------------')
 
-def ls_func(wayid,nodes_lonlat):
-    line = geo.LineString(nodes_lonlat)
-    return line
 
-#Export to a csv file
-splitted_ways_df = pd.DataFrame.from_records(splitted_ways, columns = [
-    "new_id", "way_id", "count_id", "start_node_id", "end_node_id", "way_type",
-    "maxspeed(km/h)", "nodes_list", "maxs_f","maxs_b","speed_val","oneway","lanes","lanes_f","lanes_b"
-])
+    if os.path.isfile(str(out_path) + "/gdf_MTP_europe.csv") == False:
+        # Adds length of linestring and time spent on the way at maxspeed value
+        # also creates geopandas dataframe and transforms coordinates from 4326 to 2056 system
+        gdf = gpd.GeoDataFrame(splitted_ways_df)
 
-splitted_ways_df['nodes_lonlat'] = splitted_ways_df.apply(lambda row: lonlat_funct(row['new_id'],row['nodes_list']), axis=1)
-splitted_ways_df['geometry'] = splitted_ways_df.apply(lambda row: ls_func(row['way_id'],row['nodes_lonlat']), axis=1)
+        # crs_source = ('+proj=longlat +datum=WGS84 +no_defs') #EPSG:4326
+        # crs_target = ('+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=2600000 +y_0=1200000 +ellps=bessel +towgs84=674.374,15.056,405.346,0,0,0,0 +units=m +no_defs') #EPSG:2056
+        # gdf.crs = crs_source
+        # gdf = gdf.to_crs(crs_target)
+        # gdf.crs = {"init" : "EPSG:4326"}
+        # gdf = gdf.to_crs('epsg:2056')
 
-# splitted_ways_df.to_csv(str(out_path)+"\splitted_MTP_europe.csv", sep = ",", index = None)
+        gdf['length(m)'] = gdf.apply(lambda row: length_func(row['geometry']), axis=1)
+        gdf['time(s)'] = gdf.apply(lambda row: way_time_func(row['maxspeed(km/h)'],row['length(m)']), axis=1)
 
-# Adds length of linestring and time spent on the way at maxspeed value
-# also creates geopandas dataframe and transforms coordinates from 4326 to 2056 system
+        gdf[["new_id", "geometry","start_node_id","end_node_id","length(m)","time(s)"]].to_file(str(out_path)+"\gdf_MTP_europe.shp")
+        gdf.to_csv(str(out_path)+"/gdf_MTP_europe.csv", sep = ",", index = None)
 
-# try:
-def length_func(line):
-    line_length = line.length
-    return line_length
+        print('Final geodataframe created with linestrings and exported: ' + str(len(gdf)))
+        print('------------------------------------------------------------------------')
+    else:
+        print('This file already has all files in out_path')
+        print('------------------------------------------------------------------------')
 
-def way_time_func(maxspeed,length):
-    way_time = float(length)/(float(maxspeed)*1000/3600)
-    return way_time
-
-gdf = gpd.GeoDataFrame(splitted_ways_df)
-
-# crs_source = ('+proj=longlat +datum=WGS84 +no_defs') #EPSG:4326
-# crs_target = ('+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=2600000 +y_0=1200000 +ellps=bessel +towgs84=674.374,15.056,405.346,0,0,0,0 +units=m +no_defs') #EPSG:2056
-# gdf.crs = crs_source
-# gdf = gdf.to_crs(crs_target)
-gdf.crs = {"init" : "EPSG:4326"}
-gdf = gdf.to_crs({"init" : "EPSG:2056"})
-
-gdf['length(m)'] = gdf.apply(lambda row: length_func(row['geometry']), axis=1)
-gdf['time(s)'] = gdf.apply(lambda row: way_time_func(row['maxspeed(km/h)'],row['length(m)']), axis=1)
-
-gdf[["new_id", "geometry","start_node_id","end_node_id","length(m)","time(s)"]].to_file(str(out_path)+"\gdf_MTP_europe.shp")
-gdf.to_csv(str(out_path)+"\gdf_MTP_europe.csv", sep = ",", index = None)
-
+parse_network()
