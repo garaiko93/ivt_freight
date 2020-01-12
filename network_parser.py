@@ -1,7 +1,6 @@
 import bz2file
 import re
 import pandas as pd
-from tqdm import tqdm_notebook
 import pickle
 import geopandas as gpd
 import shapely.geometry as geo
@@ -9,9 +8,11 @@ import csv
 import os
 from functools import partial
 import pyproj
+from progressbar import Percentage, ProgressBar, Bar, ETA
 from shapely.ops import transform
 from shapely.geometry import Point, Polygon,LineString,LinearRing, MultiPoint
-from pyproj import Transformer
+# from pyproj import Transformer
+import sys
 
 def ms_func(tag_value, ms_strings):
     # this function filters/cleans/converts the content of the maximum speed tag in the 'ways' elements
@@ -75,11 +76,10 @@ def way_time_func(maxspeed,length):
     way_time = float(length)/(float(maxspeed)*1000/3600)
     return way_time
 
-def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
-    raw_file = 'C:/Users/Ion/IVT/OSM_data'
-    shp_path = 'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border'
-    out_path = 'C:/Users/Ion/IVT/OSM_python/test'
-    osm_file = 'liechtenstein'
+def parse_network(raw_file, out_path, shp_file=None, create_db = True):
+    # raw_file = 'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2'
+    # out_path = 'C:/Users/Ion/IVT/OSM_python/test/lie'
+    # shp_path = 'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp'
 
     if not os.path.exists(str(out_path)):
         os.makedirs(str(out_path))
@@ -95,18 +95,20 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
     if os.path.isfile(str(out_path) + "\europe-latest_nodes.osm.bz2") == False and \
             os.path.isfile(str(out_path) + "\europe-latest_ways.osm.bz2") == False and \
             os.path.isfile(str(out_path) + "\europe-latest_relations.osm.bz2") == False:
+        print('Splitting Raw OSM file into nodes-ways-relations ...')
         node_check = 0
         way_check = 0
         relation_check = 0
         lines_nodes = 0
-        lines_ways = 0
+        lines_ways = 33
         lines_relations = 0
         lines_europe = 0
-        with bz2file.open(str(raw_file) + "/" + str(osm_file) + "-latest.osm.bz2") as f:
+        with bz2file.open(str(raw_file)) as f:
             with bz2file.open(str(out_path) + "\europe-latest_nodes.osm.bz2", 'wb') as f1:
                 with bz2file.open(str(out_path) + "\europe-latest_ways.osm.bz2", 'wb') as f2:
                     with bz2file.open(str(out_path) + "\europe-latest_relations.osm.bz2", 'wb') as f3:
                         for line in f:
+                            # bar.update(line)
                             lines_europe += 1
                             if b"<node" in line:
                                 f1.write(line)
@@ -127,9 +129,23 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
                                 lines_relations += 1
                                 if b"</relation>" in line:
                                     relation_check = 0
+        # export lines numbers
+        lines = {}
+        lines['lines_nodes'] = lines_nodes
+        lines['lines_ways'] = lines_ways
+        lines['lines_relations'] = lines_relations
+        lines['lines_europe'] = lines_europe
+        with open(str(out_path) + '/lines.pkl', 'wb') as f:
+            pickle.dump(lines, f, pickle.HIGHEST_PROTOCOL)
         print('Raw OSM file splitted into nodes-ways-relations files correctly')
         print('------------------------------------------------------------------------')
     else:
+        file = open(str(out_path) + "/lines.pkl", 'rb')
+        lines = pickle.load(file)
+        lines_nodes = lines['lines_nodes']
+        lines_ways = lines['lines_ways']
+        lines_relations = lines['lines_relations']
+        lines_europe = lines['lines_europe']
         print('Splitted files already exist in out_path')
         print('------------------------------------------------------------------------')
 
@@ -137,6 +153,7 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
     # WAYS
     # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/europe_ways_dict.pkl") == False:
+        print('Parsing ways from OSM xml file ...')
         ways = []
         way_check = 0
         ways_count = 0
@@ -153,10 +170,14 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
         lanes_b = None
         lanes = None
         nonspeed_ways = 0
+        pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
+                                    Percentage(), ' ',
+                                    ETA()], maxval=lines_ways)
 
         # this part of the code reads the WAYS file previously created line by line, taking the information that is relevant from its attributes and children elements
         with bz2file.open(str(out_path) + "\europe-latest_ways.osm.bz2") as f:
-            for line in f:
+            # for line in f:
+            for line in pbar(f):
                 if b"<way" in line:
                     # records the way id
                     way_check = 1
@@ -232,14 +253,6 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
                                     elif way_type == 'tertiary_link':
                                         way_maxspeed = 25
 
-                            #                     if lanes is None:
-                            #                         L = [lanes_b,lanes_f]
-                            #                         L = [x for x in L if x is not None]
-                            #                         try:
-                            #                             lanes = sum(L)
-                            #                         except:
-                            #                             lanes = None
-
                             start_node_id = waynodes_list[0]  # first node of the list
                             end_node_id = waynodes_list[len(waynodes_list) - 1]  # last node of the list
 
@@ -273,11 +286,15 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
         europe_ways_df = pd.DataFrame.from_records(ways, columns = [
             "way_id", "start_node_id", "end_node_id", "list of nodes", "way_type", "way_maxspeed"
         ])
-        europe_ways_df.to_csv(str(out_path)+"\europe_ways.csv", sep = ",", index = None)
+        europe_ways_df.to_csv(str(out_path)+"/europe_ways.csv", sep = ",", index = None)
 
         # EXPORT ways_dict TO FILE
         with open(str(out_path) + '/europe_ways_dict' + '.pkl', 'wb') as f:
             pickle.dump(ways_dict, f, pickle.HIGHEST_PROTOCOL)
+        with open(str(out_path) + "/nodes_of_ways_sorted.csv", "w") as output:
+            writer = csv.writer(output, lineterminator='\n')
+            for val in nodes_of_ways:
+                writer.writerow([val])
 
         print('Ways parsed succesfully: ' + str(len(ways_dict)))
         print('------------------------------------------------------------------------')
@@ -285,22 +302,34 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
         file = open(str(out_path) + "/europe_ways_dict.pkl", 'rb')
         ways_dict = pickle.load(file)
 
+        nodes_of_ways = []
+        with open(str(out_path) + "/nodes_of_ways_sorted.csv", 'r') as f:
+            reader = csv.reader(f)
+            for i in reader:
+                nodes_of_ways.append(i[0])
+        # nodes_of_ways2 = []
+        # for i in list_of_nodes:
+        #     node = i[0]
+        #     nodes_of_ways2.append(node)
         print('Ways_dict already exists in out_path, loaded: ' + str(len(ways_dict)))
         print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
     # NODES
     # -----------------------------------------------------------------------------
-    geo_restrict = False
     if os.path.isfile(str(out_path) + "/europe_nodes_dict2056.pkl") == False:
-        if geo_restrict == True:
-            ch_border30k = gpd.read_file(
-                str(shp_path) + "/bci_polygon30k_4326.shp")
+        print('Parsing nodes from OSM xml file ...')
+        pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
+                                    Percentage(), ' ',
+                                    ETA()], maxval=lines_nodes)
+        if shp_file != None:
+            ch_border30k = gpd.read_file(str(shp_file))
         nodes_europe = {}
         i = 0
         with bz2file.open(str(out_path) + "/europe-latest_nodes.osm.bz2") as f:
-            #     reading line by line the 'nodes' file created at the beginning, data for each node fulfilling the conditions are stored for the output
-            for line in f:
+            # reading line by line the 'nodes' file created at the beginning,
+            # data for each node fulfilling the conditions are stored for the output
+            for line in pbar(f):
                 if b"<node" in line:
                     # records the attributes of the element: node_id, latitude and longitude
                     m = re.search(rb'id="(.+)" lat="([+-]?\d+(?:\.\d+)?)" lon="([+-]?\d+(?:\.\d+)?)"', line)
@@ -313,7 +342,7 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
                         if node_sel == id:
                             lonlat = float(m.group(2)), float(m.group(3))
                             # activate this(next 3 lines) if location constrain wants to be set to nodes filtering
-                            if geo_restrict == True:
+                            if shp_file != None:
                                 in_ch = ch_border30k.contains(Point(lonlat))
                                 if in_ch[0] == True:
                                     nodes_europe[int(id)] = lonlat
@@ -330,8 +359,12 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
             pickle.dump(nodes_europe, f, pickle.HIGHEST_PROTOCOL)
 
         # translate them to coordinate system 2056  from 4326
+        print('Transforming nodes coordinates system to epsg:2056 ...')
+        pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
+                                    Percentage(), ' ',
+                                    ETA()], maxval=len(nodes_europe))
         nodes_europe_2056 = {}
-        for node in list(nodes_europe):
+        for node in pbar(list(nodes_europe)):
             point4326 = Point(nodes_europe[node])
             project = partial(
                 pyproj.transform,
@@ -352,12 +385,15 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
         file = open(str(out_path) + "/europe_nodes_dict2056.pkl", 'rb')
         nodes_europe_2056 = pickle.load(file)
 
+        # file = open(str(out_path) + "/europe_nodes_dict4326.pkl", 'rb')
+        # nodes_europe = pickle.load(file)
+
         print('Nodes_europe_2056 already exist in out_path, loaded: ' + str(len(nodes_europe_2056)))
         print('------------------------------------------------------------------------')
 
     # DELETE WAYS WHICH ARE NOT INSIDE swissborder 30k (if only one node of the way is inside it is kept)
     if os.path.isfile(str(out_path) + "/europe_filteredways_dict.pkl") == False and \
-            geo_restrict == True:
+            shp_file != None:
         for wayid in list(ways_dict):
             nodes_list = ways_dict[wayid][2]
             for node in nodes_list:
@@ -366,7 +402,7 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
                 except:
                     del ways_dict[wayid]
                     break
-                    # continue
+
         #EXPORT ways_dict TO FILE
         with open(str(out_path)+'/europe_filteredways_dict.pkl', 'wb') as f:
             pickle.dump(ways_dict, f, pickle.HIGHEST_PROTOCOL)
@@ -377,14 +413,13 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
     # SPLIT WAYS
     # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/europe_ways_splitted_dict.pkl") == False \
-            or os.path.isfile(str(out_path) + "/europe_ways_splitted.csv") == False:
+            or os.path.isfile(str(out_path) + "/europe_splitted_ways.csv") == False:
     # Create dictionary that counts which nodes are part of 2 or more ways and specify how many times (i.e. node_id 1 : is in 3 ways)
+        print('Splitting ways ...')
         nodes_repeated = {}
         allnodes_count = {}
-        # waysid_per_node = {}
 
         for way in ways_dict:
-            # nodesway_list = []
             ways_data = ways_dict[way][2]
             for check_node in ways_data:
                 if check_node in nodes_repeated:
@@ -435,7 +470,10 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
 
         splitted_ways_dict = {}
         splitted_ways = []
-        for way_id in ways_dict:
+        pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
+                                    Percentage(), ' ',
+                                    ETA()], maxval=len(ways_dict))
+        for way_id in pbar(ways_dict):
             nodes_list = ways_dict[way_id][2]
             num_nd = len(nodes_list)
             init_pos = 0
@@ -482,7 +520,7 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
         splitted_ways_df['geometry'] = splitted_ways_df.apply(
             lambda row: ls_func(row['nodes_lonlat']), axis=1)
 
-        splitted_ways_df.to_csv(str(out_path) + "\europe_splitted_ways.csv", sep=",", index=None)
+        splitted_ways_df.to_csv(str(out_path) + "/europe_splitted_ways.csv", sep=",", index=None)
         print('Splitted ways files created: ' + str(len(splitted_ways_df)))
         print('------------------------------------------------------------------------')
     else:
@@ -494,9 +532,9 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
         #splitted_ways
         with open(str(out_path) + '/europe_splitted_ways.csv', 'r') as f:
             reader = csv.reader(f)
-        splitted_ways_df = list(reader)
+            splitted_ways_df = list(reader)
 
-        print('Splitted ways already exist in out_path, loaded: ' +str(len(splitted_ways_dict)))
+        print('Splitted ways already exist in out_path, loaded: ' + str(len(splitted_ways_dict)))
         print('------------------------------------------------------------------------')
 
 
@@ -523,5 +561,3 @@ def parse_network(raw_file=None, shp_path=None, out_path=None, osm_file = None):
     else:
         print('This file already has all files in out_path')
         print('------------------------------------------------------------------------')
-
-parse_network()

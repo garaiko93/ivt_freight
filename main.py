@@ -2,39 +2,40 @@
 # sys.path.insert(0, 'codes')
 import datetime
 print(datetime.datetime.now().time())
-from network_graph import parse_network
-from graph_analysis import filter_graph
-from population_parser import population_parser_line
-
-# from optparse import OptionParser
-# parser = OptionParser()
-# parser.add_option("--study-areas", dest="study_areas", help="study areas")
-# parser.add_option("--network-graphs", dest="network_graphs", help="network_graphs")
-#
-# (options, args) = parser.parse_args()
+from network_parser import parse_network
+from create_graph import create_graph_func
 
 # -------------------------------------------------------------------------------------------------------------
-#  CREATE GRAPH FROM NETWORK XML FILE
+#  PARSE NETWORK FROM OSM FILE AND CREATE DATABASE
 # -------------------------------------------------------------------------------------------------------------
 # '''
-# Given the directory of the network XML file this function will: (avg time:15-20 mins)
-# 1. Split them into different files for <nodes> and <links>
-# 2. Create dictionaries from nodes and links containing respective information (where key = node/link id)
-# 3. From the links database, create a MultiDiGraph removing any isolated networks on it
-# 4. Create a shape file from the graph for visualization
-# Created files in output directory:
-# 1. Splitted XML files: switzerland_network_nodes.xml.gz/switzerland_network_ways.xml.gz
-# 2. Dictionaries for nodes and links: ch_nodes_dict2056.pkl/ch_ways_dict.pkl (+ csv of links database)
-# 3. Original graph/Largest connected graph/Isolated networks (for MultiDiGraph and DiGraph (with fastest links):
-#       ch_MultiDiGraph_bytime.gpickle/ch_MultiDiGraph_bytime_largest.gpickle/isolated_graph.gpickle
-#       ch_DiGraph_bytime.gpickle/ch_DiGraph_bytime_largest.gpickle/isolated_graph.gpickle
-#       in case there are not isolated networks: the first 2 will be equal, and no third file will be created
-# 4. Shape file of graph: ch_network_largest_graph_bytime.shp
-# Needed arguments: 1. Directory with name to the network compressed XML file (i.e.: r"C:\Users\...\network.xml.gz")
-#                   2. Output directory for all new files created (i.e.: r"C:\Users\...\network")
+# This function creates from an OSM file a network database composed of nodes and ways, through this steps:
+# 1. The raw file is splitted into _nodes, _ways and _relations files for easier later processing:
+# 2. Create dictionaries from nodes and ways containing respective information (key = node/way id):
+#         -nodes: nodes_dict[id] = (x_coord, y_coord) [in both, epsg:2056 and epsg:4326]
+#         -ways:  ways_dict[id] = [way_type, way_maxspeed, waynodes_list, way_maxspeed_f, way_maxspeed_b,
+#                                         speed_val, oneway, lanes, lanes_f, lanes_b]
+# 3. From the ways database, new files of splitted_ways (ways which only share start or end nodes, no in between nodes)
+#   are created.
+# 4. Create a shape file in epsg:2056 from the splitted ways files.
+
+# This python script requires some arguments:
+# 1. --raw_file: Directory to OSM raw file of format .osm.bz2 (i.e.: 'C:/Users/.../liechtenstein-latest.osm.bz2').
+# 2. --out_path: Directory of folder where new files will be created
+# (i.e.: 'C:/Users/.../test').
+# 3. --shp_file (optional): Directory of shp file which defines area of new scenario
+# (i.e.: "C:/Users/.../bci_polygon30k_4326.shp'")
 # '''
-# parse_network(r"C:\Users\Ion\TFM\data\scenarios\switzerland_1pm\switzerland_network.xml.gz",
-#               r"C:\Users\Ion\TFM\data\network_graphs\test")
+parse_network(raw_file='C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2',
+              out_path='C:/Users/Ion/IVT/OSM_python/test',
+              shp_file=None)
+              # shp_file='C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp'
+
+# -------------------------------------------------------------------------------------------------------------
+# CREATE GRAPH FROM NETWORK DATABASE
+# -------------------------------------------------------------------------------------------------------------
+
+create_graph_func(network_path='C:/Users/Ion/IVT/OSM_python/test')
 
 # -------------------------------------------------------------------------------------------------------------
 # PARSE AND CREATE POPULATION DATABASE FROM XML FILE
@@ -66,8 +67,8 @@ from population_parser import population_parser_line
 #                   2. Directory of out_path from create_graph() where graph and nodes_dict files are
 #                   (i.e.: r"C:\Users\...\network\graph.gpickle")
 # '''
-filter_graph(r"C:\Users\Ion\TFM\data\study_areas",
-             r"C:\Users\Ion\TFM\data\network_graphs")
+# filter_graph(r"C:\Users\Ion\TFM\data\study_areas",
+#              r"C:\Users\Ion\TFM\data\network_graphs")
 
 # print(options.study_areas)
 # print(options.network_graphs)
