@@ -75,23 +75,43 @@ secondary_ways_gdf = gpd.read_file(str(secondary_path) + "/gdf_MTP_europe.shp")
 print('Nways in secondary_ways_gdf: '+ str(len(secondary_ways_gdf)))
 
 
-
 # -----------------------------------------------------------------------------
 # MERGE NODES
 # -----------------------------------------------------------------------------
+def merge_nodes(epsg, original_path, secondary_path, out_path):
+    print('Transforming nodes of epsg:' + str(epsg))
+
+    # IMPORT nodes_europe
+    file = open(str(original_path) + "/europe_nodes_dict" + str(epsg) +".pkl", 'rb')
+    nodes_europe = pickle.load(file)
+    file.close()
+    print('Nnodes in nodes_europe epsg' + str(epsg) + ': ' + str(len(nodes_europe)))
+
+    file = open(str(secondary_path) + "/europe_nodes_dict" + str(epsg) +".pkl", 'rb')
+    nodes_chsecondary = pickle.load(file)
+    file.close()
+    print('Nnodes in nodes_chsecondary epsg' + str(epsg) + ': ' + str(len(nodes_chsecondary)))
+
+    # this will work if dictionary keys=float as keys MUST be sorted
+    europe_nodes_merged = {**nodes_europe, **nodes_chsecondary}
+    with open(str(out_path) + '/europe_nodes_dict' + str(epsg) + '.pkl', 'wb') as f:
+        pickle.dump(europe_nodes_merged, f, pickle.HIGHEST_PROTOCOL)
+    print('Nnodes in europe_nodes_dict' + str(epsg) + ': ' + str(len(europe_nodes_4326_merged)))
+
+merge_nodes('2056', original_path, secondary_path, out_path)
+merge_nodes('4326', original_path, secondary_path, out_path)
+
 # this will work if dictionary keys=float
-europe_nodes_4326_merged = {**nodes_europe_4326, **nodes_chsecondary_4326}
-with open(str(out_path) + '/europe_nodes_4326_merged' + '.pkl', 'wb') as f:
-    pickle.dump(europe_nodes_4326_merged, f, pickle.HIGHEST_PROTOCOL)
-print('Nnodes in europe_nodes_4326_merged: ' + str(len(europe_nodes_4326_merged)))
-
-# merge nodes_2056
-europe_nodes_2056_merged = {**nodes_europe_2056, **nodes_chsecondary_2056}
-with open(str(out_path) + '/europe_nodes_2056_merged' + '.pkl', 'wb') as f:
-    pickle.dump(europe_nodes_2056_merged, f, pickle.HIGHEST_PROTOCOL)
-print('Nnodes in europe_nodes_2056_merged: ' + str(len(europe_nodes_2056_merged)))
-
-
+# europe_nodes_4326_merged = {**nodes_europe_4326, **nodes_chsecondary_4326}
+# with open(str(out_path) + '/europe_nodes_4326_merged' + '.pkl', 'wb') as f:
+#     pickle.dump(europe_nodes_4326_merged, f, pickle.HIGHEST_PROTOCOL)
+# print('Nnodes in europe_nodes_4326_merged: ' + str(len(europe_nodes_4326_merged)))
+#
+# # merge nodes_2056
+# europe_nodes_2056_merged = {**nodes_europe_2056, **nodes_chsecondary_2056}
+# with open(str(out_path) + '/europe_nodes_2056_merged' + '.pkl', 'wb') as f:
+#     pickle.dump(europe_nodes_2056_merged, f, pickle.HIGHEST_PROTOCOL)
+# print('Nnodes in europe_nodes_2056_merged: ' + str(len(europe_nodes_2056_merged)))
 
 # -----------------------------------------------------------------------------
 # MERGE WAYS

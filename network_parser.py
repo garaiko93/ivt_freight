@@ -231,8 +231,8 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
                     if b"</way>" in line:
                         # by changing the way_type on this condition it can be chosen the ways that will be saved
                         # as output from the original OSM file
-                        if ('motorway' in way_type) or ('trunk' in way_type) or ('primary' in way_type):
-                        # if 'secondary' in way_type:
+                        # if ('motorway' in way_type) or ('trunk' in way_type) or ('primary' in way_type):
+                        if 'secondary' in way_type:
                         # SET VALUE OF MAXSPEED by different tries, if nothing found, set by default
                             if way_maxspeed is None:
                                 ms = [way_maxspeed_f, way_maxspeed_b]
@@ -378,9 +378,6 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
                 pyproj.Proj('epsg:2056'))
             point2056 = transform(project, point4326)
             nodes_europe_2056[node] = (point2056.x, point2056.y)
-
-        # transformer = Transformer.from_crs("epsg:4326", "epsg:2056")
-        # transformer.transform(47.1697019, 9.4931778)
 
         # EXPORT nodes_europe TO FILE
         with open(str(out_path) + '/europe_nodes_dict2056.pkl', 'wb') as f:
@@ -549,13 +546,6 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         # also creates geopandas dataframe and transforms coordinates from 4326 to 2056 system
         gdf = gpd.GeoDataFrame(splitted_ways_df)
 
-        # crs_source = ('+proj=longlat +datum=WGS84 +no_defs') #EPSG:4326
-        # crs_target = ('+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=2600000 +y_0=1200000 +ellps=bessel +towgs84=674.374,15.056,405.346,0,0,0,0 +units=m +no_defs') #EPSG:2056
-        # gdf.crs = crs_source
-        # gdf = gdf.to_crs(crs_target)
-        # gdf.crs = {"init" : "EPSG:4326"}
-        # gdf = gdf.to_crs('epsg:2056')
-
         gdf['length(m)'] = gdf.apply(lambda row: length_func(row['geometry']), axis=1)
         gdf['time(s)'] = gdf.apply(lambda row: way_time_func(row['maxspeed(km/h)'],row['length(m)']), axis=1)
 
@@ -625,7 +615,7 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         G_isolated = nx.read_gpickle(str(out_path) + '/eu_network_graph_bytime.gpickle')
 
         # Identify the largest component and the "isolated" nodes
-        components = list(nx.connected_components(G))  # list because it returns a generator
+        components = list(nx.connected_components(G_isolated))  # list because it returns a generator
         components.sort(key=len, reverse=True)
         longest_networks = []
         for i in range(0, len(components)):
@@ -633,6 +623,7 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
             longest_networks.append(len(net))
             if i == 10:
                 break
+        isolated = set(g for cc in components for g in cc)
         print(datetime.datetime.now(), 'Graph with largest network already exists, graph loaded')
         print('------------------------------------------------------------------------')
 
@@ -651,7 +642,7 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         iso_edges = G_isolated.edges(list(isolated))
         iso_edges_df_1 = pd.DataFrame.from_records(list(iso_edges), columns = ["start_node_id","end_node_id"])
         iso_edges_df_2 = pd.DataFrame.from_records(list(iso_edges), columns = ["end_node_id","start_node_id"])
-        train_iso = train[['new_id','start_node_id','end_node_id','nodes_list']]
+        train_iso = gdf[['new_id','start_node_id','end_node_id','nodes_list']]
 
         iso_edges_df = pd.concat ([iso_edges_df_1,iso_edges_df_2],sort=False).drop_duplicates().reset_index(drop=True)
         intersected_df = pd.merge(iso_edges_df,train_iso, how='inner')
@@ -661,8 +652,8 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
                                                                                nodes_dict), axis=1)
 
         intersected_gdf = gpd.GeoDataFrame(intersected_df)
-        intersected_gdf.crs = {"init": "EPSG:4326"}
-        intersected_gdf = intersected_gdf.to_crs({"init": "EPSG:2056"})
+        # intersected_gdf.crs = {"init": "EPSG:4326"}
+        # intersected_gdf = intersected_gdf.to_crs({"init": "EPSG:2056"})
         intersected_gdf.to_file(str(out_path) + "/isolated_graph.shp")
 
         # export GRAPH to file

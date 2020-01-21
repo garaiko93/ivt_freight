@@ -53,7 +53,7 @@ parse_network(raw_file=d['raw_file'],
               # shp_file='C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp'
 
 # -------------------------------------------------------------------------------------------------------------
-# CREATE GRAPH FROM NETWORK DATABASE
+# MERGE NETWORKS
 # -------------------------------------------------------------------------------------------------------------
 
 # create_graph_func(network_path=d['out_path'])
