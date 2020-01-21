@@ -555,11 +555,11 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         print(datetime.datetime.now(), 'Final geodataframe created with linestrings and exported: ' + str(len(gdf)))
         print('------------------------------------------------------------------------')
     else:
-        gdf = pd.read_csv(str(out_path) + '\gdf_MTP_europe.csv')
+        gdf = pd.read_csv(str(out_path) + '/gdf_MTP_europe.csv')
         print(datetime.datetime.now(), 'Csv already exists, loaded: ' + str(len(gdf)))
         print('------------------------------------------------------------------------')
 
-    if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") == False:
+    if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False:
         print(datetime.datetime.now(), 'Graph creation begins ...')
         #create a graph from network
         G = nx.Graph()
@@ -628,7 +628,7 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         print('------------------------------------------------------------------------')
 
     # create shapefile with all nodes/edges excluded from the final graph (only for visual purpose)
-    if os.path.isfile(str(out_path) + "/eu_isolated_graph_bytime.gpickle") == False and \
+    if os.path.isfile(str(out_path) + "/eu_isolated_graph_bytime.gpickle") is False and \
             len(longest_networks) > 1:
         print(datetime.datetime.now(), 'Creating shpfile with graphs isolatated nodes ...')
         #IMPORT nodes_europe
