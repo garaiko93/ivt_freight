@@ -1,9 +1,24 @@
 # import sys
 # sys.path.insert(0, 'codes')
 import datetime
-print(datetime.datetime.now().time())
 from network_parser import parse_network
 from create_graph import create_graph_func
+import argparse
+
+print(datetime.datetime.now(), 'Main script begins')
+
+# Define arguments parser
+parser = argparse.ArgumentParser(description='Cut and analyse a graph for a certain input area.')
+# network_parser
+parser.add_argument('raw_file', help='path to original OSM file')
+parser.add_argument('out_path', help='path where to export files')
+parser.add_argument('--shp_file', dest="shp_file", help='path to shp file')
+parser.add_argument('--export_files', dest="export_files", help="True/False")
+# create_graph
+args = parser.parse_args()
+d = vars(args)
+# print(args, args.shp_file, args.export_files)
+# print(d['raw_file'], d['out_path'])
 
 # -------------------------------------------------------------------------------------------------------------
 #  PARSE NETWORK FROM OSM FILE AND CREATE DATABASE
@@ -26,16 +41,23 @@ from create_graph import create_graph_func
 # 3. --shp_file (optional): Directory of shp file which defines area of new scenario
 # (i.e.: "C:/Users/.../bci_polygon30k_4326.shp'")
 # '''
-parse_network(raw_file='C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2',
-              out_path='C:/Users/Ion/IVT/OSM_python/test',
-              shp_file=None)
+
+parse_network(raw_file=d['raw_file'],
+              out_path=d['out_path'],
+              shp_file=d['shp_file'],
+              export_files=d['export_files'])
+# parse_network(raw_file='C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2',
+#               out_path='C:/Users/Ion/IVT/OSM_python/test/lie',
+#               shp_file=None,
+#               export_files=True)
               # shp_file='C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp'
 
 # -------------------------------------------------------------------------------------------------------------
 # CREATE GRAPH FROM NETWORK DATABASE
 # -------------------------------------------------------------------------------------------------------------
 
-create_graph_func(network_path='C:/Users/Ion/IVT/OSM_python/test')
+# create_graph_func(network_path=d['out_path'])
+# create_graph_func(network_path='C:/Users/Ion/IVT/OSM_python/test/lie')
 
 # -------------------------------------------------------------------------------------------------------------
 # PARSE AND CREATE POPULATION DATABASE FROM XML FILE
@@ -76,4 +98,4 @@ create_graph_func(network_path='C:/Users/Ion/IVT/OSM_python/test')
 #
 # filter_graph(options.study_areas, options.network_graphs)
 
-print(datetime.datetime.now().time())
+print(datetime.datetime.now(), 'Main script ends')

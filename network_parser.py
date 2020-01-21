@@ -3,7 +3,6 @@ import re
 import pandas as pd
 import pickle
 import geopandas as gpd
-import shapely.geometry as geo
 import csv
 import os
 from functools import partial
@@ -11,6 +10,9 @@ import pyproj
 from progressbar import Percentage, ProgressBar, Bar, ETA
 from shapely.ops import transform
 from shapely.geometry import Point, Polygon,LineString,LinearRing, MultiPoint
+import shapely.geometry as geo
+import datetime
+import networkx as nx
 # from pyproj import Transformer
 import sys
 
@@ -76,16 +78,24 @@ def way_time_func(maxspeed,length):
     way_time = float(length)/(float(maxspeed)*1000/3600)
     return way_time
 
-def parse_network(raw_file, out_path, shp_file=None, create_db = True):
+def sw_nodes(new_id, splitted_ways_dict, nodes_dict):
+    coord_list = []
+    nodes_list = splitted_ways_dict[new_id][2]
+    for node in nodes_list:
+        coord_list.append(nodes_dict[int(node)])
+    line = geo.LineString(coord_list)
+    return line
+
+def parse_network(raw_file, out_path, shp_file=None, export_files = True):
     # raw_file = 'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2'
     # out_path = 'C:/Users/Ion/IVT/OSM_python/test/lie'
     # shp_path = 'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp'
 
     if not os.path.exists(str(out_path)):
         os.makedirs(str(out_path))
-        print('Directory created')
+        print(datetime.datetime.now(), 'Directory created')
     else:
-        print('Directory exists')
+        print(datetime.datetime.now(), 'Directory exists')
     print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
@@ -95,7 +105,7 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
     if os.path.isfile(str(out_path) + "\europe-latest_nodes.osm.bz2") == False and \
             os.path.isfile(str(out_path) + "\europe-latest_ways.osm.bz2") == False and \
             os.path.isfile(str(out_path) + "\europe-latest_relations.osm.bz2") == False:
-        print('Splitting Raw OSM file into nodes-ways-relations ...')
+        print(datetime.datetime.now(), 'Splitting Raw OSM file into nodes-ways-relations ...')
         node_check = 0
         way_check = 0
         relation_check = 0
@@ -137,7 +147,7 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
         lines['lines_europe'] = lines_europe
         with open(str(out_path) + '/lines.pkl', 'wb') as f:
             pickle.dump(lines, f, pickle.HIGHEST_PROTOCOL)
-        print('Raw OSM file splitted into nodes-ways-relations files correctly')
+        print(datetime.datetime.now(), 'Raw OSM file splitted into nodes-ways-relations files correctly')
         print('------------------------------------------------------------------------')
     else:
         file = open(str(out_path) + "/lines.pkl", 'rb')
@@ -146,14 +156,14 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
         lines_ways = lines['lines_ways']
         lines_relations = lines['lines_relations']
         lines_europe = lines['lines_europe']
-        print('Splitted files already exist in out_path')
+        print(datetime.datetime.now(), 'Splitted files already exist in out_path')
         print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
     # WAYS
     # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/europe_ways_dict.pkl") == False:
-        print('Parsing ways from OSM xml file ...')
+        print(datetime.datetime.now(), 'Parsing ways from OSM xml file ...')
         ways = []
         way_check = 0
         ways_count = 0
@@ -296,7 +306,7 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
             for val in nodes_of_ways:
                 writer.writerow([val])
 
-        print('Ways parsed succesfully: ' + str(len(ways_dict)))
+        print(datetime.datetime.now(), 'Ways parsed succesfully: ' + str(len(ways_dict)))
         print('------------------------------------------------------------------------')
     else:
         file = open(str(out_path) + "/europe_ways_dict.pkl", 'rb')
@@ -307,18 +317,14 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
             reader = csv.reader(f)
             for i in reader:
                 nodes_of_ways.append(i[0])
-        # nodes_of_ways2 = []
-        # for i in list_of_nodes:
-        #     node = i[0]
-        #     nodes_of_ways2.append(node)
-        print('Ways_dict already exists in out_path, loaded: ' + str(len(ways_dict)))
+        print(datetime.datetime.now(), 'Ways_dict already exists in out_path, loaded: ' + str(len(ways_dict)))
         print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
     # NODES
     # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/europe_nodes_dict2056.pkl") == False:
-        print('Parsing nodes from OSM xml file ...')
+        print(datetime.datetime.now(), 'Parsing nodes from OSM xml file ...')
         pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
                                     Percentage(), ' ',
                                     ETA()], maxval=lines_nodes)
@@ -359,7 +365,7 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
             pickle.dump(nodes_europe, f, pickle.HIGHEST_PROTOCOL)
 
         # translate them to coordinate system 2056  from 4326
-        print('Transforming nodes coordinates system to epsg:2056 ...')
+        print(datetime.datetime.now(), 'Transforming nodes coordinates system to epsg:2056 ...')
         pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
                                     Percentage(), ' ',
                                     ETA()], maxval=len(nodes_europe))
@@ -379,7 +385,7 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
         # EXPORT nodes_europe TO FILE
         with open(str(out_path) + '/europe_nodes_dict2056.pkl', 'wb') as f:
             pickle.dump(nodes_europe_2056, f, pickle.HIGHEST_PROTOCOL)
-        print('Nodes parsed succesfully: ' + str(len(nodes_europe_2056)))
+        print(datetime.datetime.now(), 'Nodes parsed succesfully: ' + str(len(nodes_europe_2056)))
         print('------------------------------------------------------------------------')
     else:
         file = open(str(out_path) + "/europe_nodes_dict2056.pkl", 'rb')
@@ -388,7 +394,7 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
         # file = open(str(out_path) + "/europe_nodes_dict4326.pkl", 'rb')
         # nodes_europe = pickle.load(file)
 
-        print('Nodes_europe_2056 already exist in out_path, loaded: ' + str(len(nodes_europe_2056)))
+        print(datetime.datetime.now(), 'Nodes_europe_2056 already exist in out_path, loaded: ' + str(len(nodes_europe_2056)))
         print('------------------------------------------------------------------------')
 
     # DELETE WAYS WHICH ARE NOT INSIDE swissborder 30k (if only one node of the way is inside it is kept)
@@ -406,7 +412,7 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
         #EXPORT ways_dict TO FILE
         with open(str(out_path)+'/europe_filteredways_dict.pkl', 'wb') as f:
             pickle.dump(ways_dict, f, pickle.HIGHEST_PROTOCOL)
-        print('New ways in geo area parsed: ' + str(len(ways_dict)))
+        print(datetime.datetime.now(), 'New ways in geo area parsed: ' + str(len(ways_dict)))
         print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
@@ -415,7 +421,7 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
     if os.path.isfile(str(out_path) + "/europe_ways_splitted_dict.pkl") == False \
             or os.path.isfile(str(out_path) + "/europe_splitted_ways.csv") == False:
     # Create dictionary that counts which nodes are part of 2 or more ways and specify how many times (i.e. node_id 1 : is in 3 ways)
-        print('Splitting ways ...')
+        print(datetime.datetime.now(), 'Splitting ways ...')
         nodes_repeated = {}
         allnodes_count = {}
 
@@ -521,7 +527,7 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
             lambda row: ls_func(row['nodes_lonlat']), axis=1)
 
         splitted_ways_df.to_csv(str(out_path) + "/europe_splitted_ways.csv", sep=",", index=None)
-        print('Splitted ways files created: ' + str(len(splitted_ways_df)))
+        print(datetime.datetime.now(), 'Splitted ways files created: ' + str(len(splitted_ways_df)))
         print('------------------------------------------------------------------------')
     else:
         # IMPORT splitted_ways_dict
@@ -534,7 +540,7 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
             reader = csv.reader(f)
             splitted_ways_df = list(reader)
 
-        print('Splitted ways already exist in out_path, loaded: ' + str(len(splitted_ways_dict)))
+        print(datetime.datetime.now(), 'Splitted ways already exist in out_path, loaded: ' + str(len(splitted_ways_dict)))
         print('------------------------------------------------------------------------')
 
 
@@ -556,8 +562,118 @@ def parse_network(raw_file, out_path, shp_file=None, create_db = True):
         gdf[["new_id", "geometry","start_node_id","end_node_id","length(m)","time(s)"]].to_file(str(out_path)+"\gdf_MTP_europe.shp")
         gdf.to_csv(str(out_path)+"/gdf_MTP_europe.csv", sep = ",", index = None)
 
-        print('Final geodataframe created with linestrings and exported: ' + str(len(gdf)))
+        print(datetime.datetime.now(), 'Final geodataframe created with linestrings and exported: ' + str(len(gdf)))
         print('------------------------------------------------------------------------')
     else:
-        print('This file already has all files in out_path')
+        gdf = pd.read_csv(str(out_path) + '\gdf_MTP_europe.csv')
+        print(datetime.datetime.now(), 'Csv already exists, loaded: ' + str(len(gdf)))
         print('------------------------------------------------------------------------')
+
+    if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") == False:
+        print(datetime.datetime.now(), 'Graph creation begins ...')
+        #create a graph from network
+        G = nx.Graph()
+        G_isolated = nx.Graph()
+
+        # import the network created from the OSM file
+        # train = pd.read_csv(str(out_path) + '\gdf_MTP_europe.csv')
+        edges = gdf[["start_node_id", "end_node_id", "time(s)", "new_id"]]
+        edges_list = edges.values.tolist()
+
+        # introduce every way as edge with attributes of time and new_id
+        for start, end, time, new_id in edges_list:
+            G.add_edge(int(start), int(end), time = time, new_id = new_id)
+            G_isolated.add_edge(int(start), int(end), time = time, new_id = new_id)
+        start_Nn=G.number_of_nodes()
+        start_Ne=G.number_of_edges()
+
+        # export graph of original network to file (without excluding any edge or island)
+        nx.write_gpickle(G, str(out_path) + "/eu_network_graph_bytime.gpickle")
+
+        # Identify the largest component and the "isolated" nodes
+        components = list(nx.connected_components(G)) # list because it returns a generator
+        components.sort(key=len, reverse=True)
+        longest_networks = []
+        for i in range(0, len(components)):
+            net = components[i]
+            longest_networks.append(len(net))
+            if i == 10:
+                break
+
+        largest = components.pop(0)
+        isolated = set(g for cc in components for g in cc)
+        num_isolated = G.order() - len(largest)
+
+        # keep only the largest island of the original graph (so all nodes are reachable in the graph)
+        # remove isolated nodes from G
+        G.remove_nodes_from(isolated)
+        end_Nn=G.number_of_nodes()
+        end_Ne=G.number_of_edges()
+
+        # export final graph only containing largest island from the network to file
+        nx.write_gpickle(G, str(out_path) + "/eu_network_largest_graph_bytime.gpickle")
+
+        print(datetime.datetime.now(), 'Input edges: '+str(len(edges_list)))
+        print(datetime.datetime.now(), 'Start/End N_nodes: ' + str(start_Nn) + '/' + str(end_Nn))
+        print(datetime.datetime.now(), 'Start/End N_edges: ' + str(start_Ne) + '/' + str(end_Ne))
+
+        print(datetime.datetime.now(), 'N isolated nodes: ' +  str(num_isolated))
+        print(datetime.datetime.now(), '10 largest networks (nodes): ' + str(longest_networks))
+        print('------------------------------------------------------------------------')
+    else:
+        G = nx.read_gpickle(str(out_path) + '/eu_network_largest_graph_bytime.gpickle')
+        G_isolated = nx.read_gpickle(str(out_path) + '/eu_network_graph_bytime.gpickle')
+
+        # Identify the largest component and the "isolated" nodes
+        components = list(nx.connected_components(G))  # list because it returns a generator
+        components.sort(key=len, reverse=True)
+        longest_networks = []
+        for i in range(0, len(components)):
+            net = components[i]
+            longest_networks.append(len(net))
+            if i == 10:
+                break
+        print(datetime.datetime.now(), 'Graph with largest network already exists, graph loaded')
+        print('------------------------------------------------------------------------')
+
+    # create shapefile with all nodes/edges excluded from the final graph (only for visual purpose)
+    if os.path.isfile(str(out_path) + "/eu_isolated_graph_bytime.gpickle") == False and \
+            len(longest_networks) > 1:
+        print(datetime.datetime.now(), 'Creating shpfile with graphs isolatated nodes ...')
+        #IMPORT nodes_europe
+        file = open(str(out_path) + "/europe_nodes_dict2056.pkl", 'rb')
+        nodes_dict = pickle.load(file)
+
+        file = open(str(out_path) + "/europe_ways_splitted_dict.pkl", 'rb')
+        splitted_ways_dict = pickle.load(file)
+        file.close()
+
+        iso_edges = G_isolated.edges(list(isolated))
+        iso_edges_df_1 = pd.DataFrame.from_records(list(iso_edges), columns = ["start_node_id","end_node_id"])
+        iso_edges_df_2 = pd.DataFrame.from_records(list(iso_edges), columns = ["end_node_id","start_node_id"])
+        train_iso = train[['new_id','start_node_id','end_node_id','nodes_list']]
+
+        iso_edges_df = pd.concat ([iso_edges_df_1,iso_edges_df_2],sort=False).drop_duplicates().reset_index(drop=True)
+        intersected_df = pd.merge(iso_edges_df,train_iso, how='inner')
+
+        intersected_df['geometry'] = intersected_df.apply(lambda row: sw_nodes(row['new_id'],
+                                                                               splitted_ways_dict,
+                                                                               nodes_dict), axis=1)
+
+        intersected_gdf = gpd.GeoDataFrame(intersected_df)
+        intersected_gdf.crs = {"init": "EPSG:4326"}
+        intersected_gdf = intersected_gdf.to_crs({"init": "EPSG:2056"})
+        intersected_gdf.to_file(str(out_path) + "/isolated_graph.shp")
+
+        # export GRAPH to file
+        nx.write_gpickle(G_isolated, str(out_path) + "/eu_isolated_graph_bytime.gpickle")
+
+        print(datetime.datetime.now(), 'Isolated ways: ' + str(len(intersected_df)))
+        print('------------------------------------------------------------------------')
+    else:
+        print(datetime.datetime.now(), 'Network does not have isolated nodes or shapefile already exists in out_path ')
+        print('------------------------------------------------------------------------')
+
+    print(datetime.datetime.now(), 'Graph creation process finished correctly')
+    print('------------------------------------------------------------------------')
+    print('------------------------------------------------------------------------')
