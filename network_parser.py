@@ -9,12 +9,10 @@ from functools import partial
 import pyproj
 from progressbar import Percentage, ProgressBar, Bar, ETA
 from shapely.ops import transform
-from shapely.geometry import Point, Polygon,LineString,LinearRing, MultiPoint
+from shapely.geometry import Point
 import shapely.geometry as geo
 import datetime
-import networkx as nx
-# from pyproj import Transformer
-import sys
+from create_graph import create_graph_func
 
 def ms_func(tag_value, ms_strings):
     # this function filters/cleans/converts the content of the maximum speed tag in the 'ways' elements
@@ -549,7 +547,7 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         gdf['length(m)'] = gdf.apply(lambda row: length_func(row['geometry']), axis=1)
         gdf['time(s)'] = gdf.apply(lambda row: way_time_func(row['maxspeed(km/h)'],row['length(m)']), axis=1)
 
-        gdf[["new_id", "geometry","start_node_id","end_node_id","length(m)","time(s)"]].to_file(str(out_path)+"\gdf_MTP_europe.shp")
+        gdf[["new_id", "geometry","start_node_id","end_node_id","length(m)","time(s)"]].to_file(str(out_path)+"/gdf_MTP_europe.shp")
         gdf.to_csv(str(out_path)+"/gdf_MTP_europe.csv", sep = ",", index = None)
 
         print(datetime.datetime.now(), 'Final geodataframe created with linestrings and exported: ' + str(len(gdf)))
@@ -559,111 +557,11 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         print(datetime.datetime.now(), 'Csv already exists, loaded: ' + str(len(gdf)))
         print('------------------------------------------------------------------------')
 
-    if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False:
-        print(datetime.datetime.now(), 'Graph creation begins ...')
-        #create a graph from network
-        G = nx.Graph()
-        G_isolated = nx.Graph()
-
-        # import the network created from the OSM file
-        # train = pd.read_csv(str(out_path) + '\gdf_MTP_europe.csv')
-        edges = gdf[["start_node_id", "end_node_id", "time(s)", "new_id"]]
-        edges_list = edges.values.tolist()
-
-        # introduce every way as edge with attributes of time and new_id
-        for start, end, time, new_id in edges_list:
-            G.add_edge(int(start), int(end), time = time, new_id = new_id)
-            G_isolated.add_edge(int(start), int(end), time = time, new_id = new_id)
-        start_Nn=G.number_of_nodes()
-        start_Ne=G.number_of_edges()
-
-        # export graph of original network to file (without excluding any edge or island)
-        nx.write_gpickle(G, str(out_path) + "/eu_network_graph_bytime.gpickle")
-
-        # Identify the largest component and the "isolated" nodes
-        components = list(nx.connected_components(G)) # list because it returns a generator
-        components.sort(key=len, reverse=True)
-        longest_networks = []
-        for i in range(0, len(components)):
-            net = components[i]
-            longest_networks.append(len(net))
-            if i == 10:
-                break
-
-        largest = components.pop(0)
-        isolated = set(g for cc in components for g in cc)
-        num_isolated = G.order() - len(largest)
-
-        # keep only the largest island of the original graph (so all nodes are reachable in the graph)
-        # remove isolated nodes from G
-        G.remove_nodes_from(isolated)
-        end_Nn=G.number_of_nodes()
-        end_Ne=G.number_of_edges()
-
-        # export final graph only containing largest island from the network to file
-        nx.write_gpickle(G, str(out_path) + "/eu_network_largest_graph_bytime.gpickle")
-
-        print(datetime.datetime.now(), 'Input edges: '+str(len(edges_list)))
-        print(datetime.datetime.now(), 'Start/End N_nodes: ' + str(start_Nn) + '/' + str(end_Nn))
-        print(datetime.datetime.now(), 'Start/End N_edges: ' + str(start_Ne) + '/' + str(end_Ne))
-
-        print(datetime.datetime.now(), 'N isolated nodes: ' +  str(num_isolated))
-        print(datetime.datetime.now(), '10 largest networks (nodes): ' + str(longest_networks))
-        print('------------------------------------------------------------------------')
-    else:
-        G = nx.read_gpickle(str(out_path) + '/eu_network_largest_graph_bytime.gpickle')
-        G_isolated = nx.read_gpickle(str(out_path) + '/eu_network_graph_bytime.gpickle')
-
-        # Identify the largest component and the "isolated" nodes
-        components = list(nx.connected_components(G_isolated))  # list because it returns a generator
-        components.sort(key=len, reverse=True)
-        longest_networks = []
-        for i in range(0, len(components)):
-            net = components[i]
-            longest_networks.append(len(net))
-            if i == 10:
-                break
-        isolated = set(g for cc in components for g in cc)
-        print(datetime.datetime.now(), 'Graph with largest network already exists, graph loaded')
-        print('------------------------------------------------------------------------')
-
-    # create shapefile with all nodes/edges excluded from the final graph (only for visual purpose)
-    if os.path.isfile(str(out_path) + "/eu_isolated_graph_bytime.gpickle") is False and \
-            len(longest_networks) > 1:
-        print(datetime.datetime.now(), 'Creating shpfile with graphs isolatated nodes ...')
-        #IMPORT nodes_europe
-        file = open(str(out_path) + "/europe_nodes_dict2056.pkl", 'rb')
-        nodes_dict = pickle.load(file)
-
-        file = open(str(out_path) + "/europe_ways_splitted_dict.pkl", 'rb')
-        splitted_ways_dict = pickle.load(file)
-        file.close()
-
-        iso_edges = G_isolated.edges(list(isolated))
-        iso_edges_df_1 = pd.DataFrame.from_records(list(iso_edges), columns = ["start_node_id","end_node_id"])
-        iso_edges_df_2 = pd.DataFrame.from_records(list(iso_edges), columns = ["end_node_id","start_node_id"])
-        train_iso = gdf[['new_id','start_node_id','end_node_id','nodes_list']]
-
-        iso_edges_df = pd.concat ([iso_edges_df_1,iso_edges_df_2],sort=False).drop_duplicates().reset_index(drop=True)
-        intersected_df = pd.merge(iso_edges_df,train_iso, how='inner')
-
-        intersected_df['geometry'] = intersected_df.apply(lambda row: sw_nodes(row['new_id'],
-                                                                               splitted_ways_dict,
-                                                                               nodes_dict), axis=1)
-
-        intersected_gdf = gpd.GeoDataFrame(intersected_df)
-        # intersected_gdf.crs = {"init": "EPSG:4326"}
-        # intersected_gdf = intersected_gdf.to_crs({"init": "EPSG:2056"})
-        intersected_gdf.to_file(str(out_path) + "/isolated_graph.shp")
-
-        # export GRAPH to file
-        nx.write_gpickle(G_isolated, str(out_path) + "/eu_isolated_graph_bytime.gpickle")
-
-        print(datetime.datetime.now(), 'Isolated ways: ' + str(len(intersected_df)))
-        print('------------------------------------------------------------------------')
-    else:
-        print(datetime.datetime.now(), 'Network does not have isolated nodes or shapefile already exists in out_path ')
-        print('------------------------------------------------------------------------')
+    # -----------------------------------------------------------------------------
+    # CREATE GRAPH AND FILES (shpfile, pickle, isolated files)
+    # -----------------------------------------------------------------------------
+    # this will call the function to create the graph with the data created until here
+    create_graph_func(out_path, gdf)
 
     print(datetime.datetime.now(), 'Graph creation process finished correctly')
     print('------------------------------------------------------------------------')

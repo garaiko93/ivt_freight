@@ -59,6 +59,8 @@ def create_graph_func(out_path, gdf):
         # export final graph only containing largest island from the network to file
         nx.write_gpickle(G, str(out_path) + "/eu_network_largest_graph_bytime.gpickle")
 
+        # include here code to create shpfile with largest network
+
         print(datetime.datetime.now(), 'Input edges: ' + str(len(edges_list)))
         print(datetime.datetime.now(), 'Start/End N_nodes: ' + str(start_Nn) + '/' + str(end_Nn))
         print(datetime.datetime.now(), 'Start/End N_edges: ' + str(start_Ne) + '/' + str(end_Ne))
@@ -69,7 +71,6 @@ def create_graph_func(out_path, gdf):
     else:
         G = nx.read_gpickle(str(out_path) + '/eu_network_largest_graph_bytime.gpickle')
         G_isolated = nx.read_gpickle(str(out_path) + '/eu_network_graph_bytime.gpickle')
-        gdf = pd.read_csv(str(out_path) + '/gdf_MTP_europe.csv')
 
         # Identify the largest component and the "isolated" nodes
         components = list(nx.connected_components(G_isolated))  # list because it returns a generator
