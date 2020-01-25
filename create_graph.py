@@ -6,6 +6,27 @@ import networkx as nx
 import os
 import datetime
 
+
+def create_shp_largest(G, list_nodes, nodes_dict, splitted_ways_dict, gdf, out_path, filename):
+    if len(list_nodes) == 0:
+        g_edges = G.edges()
+    else:
+        g_edges = G.edges(list_nodes)
+    g_edges_df1 = pd.DataFrame.from_records(list(g_edges), columns=["start_node_id", "end_node_id"])
+    g_edges_df2 = pd.DataFrame.from_records(list(g_edges), columns=["end_node_id", "start_node_id"])
+    all_edges = gdf[['new_id', 'start_node_id', 'end_node_id', 'nodes_list']]
+
+    edges_df = pd.concat([g_edges_df1, g_edges_df2], sort=False).drop_duplicates().reset_index(drop=True)
+    intersected_df = pd.merge(edges_df, all_edges, how='inner')
+
+    intersected_df['geometry'] = intersected_df.apply(lambda row: sw_nodes(row['new_id'],
+                                                                     splitted_ways_dict,
+                                                                     nodes_dict), axis=1)
+    intersected_gdf = gpd.GeoDataFrame(intersected_df)
+    intersected_gdf.to_file(str(out_path) + "/" + str(filename) + ".shp")
+
+    print(datetime.datetime.now(), 'Shp file created successfully with ' + str(len(intersected_df)) + ' ways.')
+
 def sw_nodes(new_id, splitted_ways_dict, nodes_dict):
     coord_list = []
     nodes_list = splitted_ways_dict[new_id][2]
@@ -14,7 +35,7 @@ def sw_nodes(new_id, splitted_ways_dict, nodes_dict):
     line = geo.LineString(coord_list)
     return line
 
-def create_graph_func(out_path, gdf):
+def create_graph_func(out_path, gdf, nodes_dict, splitted_ways_dict):
     if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") == False:
         print(datetime.datetime.now(), 'Graph creation begins ...')
         # create a graph from network
@@ -59,7 +80,9 @@ def create_graph_func(out_path, gdf):
         # export final graph only containing largest island from the network to file
         nx.write_gpickle(G, str(out_path) + "/eu_network_largest_graph_bytime.gpickle")
 
-        # include here code to create shpfile with largest network
+        # Create shp file with final graph
+        print(datetime.datetime.now(), 'Creating shp file of largest network with epsg:2056 ...')
+        create_shp_largest(G, [], nodes_dict, splitted_ways_dict, gdf, out_path, 'eu_network_largest_graph_bytime')
 
         print(datetime.datetime.now(), 'Input edges: ' + str(len(edges_list)))
         print(datetime.datetime.now(), 'Start/End N_nodes: ' + str(start_Nn) + '/' + str(end_Nn))
@@ -89,38 +112,17 @@ def create_graph_func(out_path, gdf):
     if os.path.isfile(str(out_path) + "/eu_isolated_graph_bytime.gpickle") is False and \
             len(longest_networks) > 1:
         print(datetime.datetime.now(), 'Creating shpfile with graphs isolatated nodes ...')
-        # IMPORT nodes_europe
-        file = open(str(out_path) + "/europe_nodes_dict2056.pkl", 'rb')
-        nodes_dict = pickle.load(file)
 
-        file = open(str(out_path) + "/europe_ways_splitted_dict.pkl", 'rb')
-        splitted_ways_dict = pickle.load(file)
-        file.close()
-
-        iso_edges = G_isolated.edges(list(isolated))
-        iso_edges_df_1 = pd.DataFrame.from_records(list(iso_edges), columns=["start_node_id", "end_node_id"])
-        iso_edges_df_2 = pd.DataFrame.from_records(list(iso_edges), columns=["end_node_id", "start_node_id"])
-        train_iso = gdf[['new_id', 'start_node_id', 'end_node_id', 'nodes_list']]
-
-        iso_edges_df = pd.concat([iso_edges_df_1, iso_edges_df_2], sort=False).drop_duplicates().reset_index(drop=True)
-        intersected_df = pd.merge(iso_edges_df, train_iso, how='inner')
-
-        intersected_df['geometry'] = intersected_df.apply(lambda row: sw_nodes(row['new_id'],
-                                                                               splitted_ways_dict,
-                                                                               nodes_dict), axis=1)
-
-        intersected_gdf = gpd.GeoDataFrame(intersected_df)
-        # intersected_gdf.crs = {"init": "EPSG:4326"}
-        # intersected_gdf = intersected_gdf.to_crs({"init": "EPSG:2056"})
-        intersected_gdf.to_file(str(out_path) + "/isolated_graph.shp")
+        # create shp file of isolated networks from original graph
+        create_shp_largest(G, isolated, nodes_dict, splitted_ways_dict, gdf, out_path, 'isolated_graph')
 
         # export GRAPH to file
         nx.write_gpickle(G_isolated, str(out_path) + "/eu_isolated_graph_bytime.gpickle")
 
-        print(datetime.datetime.now(), 'Isolated ways: ' + str(len(intersected_df)))
+        # print(datetime.datetime.now(), 'Isolated ways: ' + str(len(intersected_df)))
         print('------------------------------------------------------------------------')
     else:
-        print(datetime.datetime.now(), 'Network does not have isolated nodes or shapefile already exists in out_path ')
+        print(datetime.datetime.now(), 'Network does not have isolated nodes or shapefile of them already exists in out_path ')
         print('------------------------------------------------------------------------')
 
 # #Create the tree of nodes composing the node

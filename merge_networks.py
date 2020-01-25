@@ -8,7 +8,11 @@ from create_graph import create_graph_func
 original_path = r'C:/Users/Ion/IVT/OSM_python/test/lie/MTP'
 secondary_path = r'C:/Users/Ion/IVT/OSM_python/test/lie/S'
 out_path = r'C:/Users/Ion/IVT/OSM_python/test/lie/merged'
-
+if not os.path.exists(str(out_path)):
+    os.makedirs(str(out_path))
+    print(datetime.datetime.now(), 'Directory created')
+else:
+    print(datetime.datetime.now(), 'Directory exists')
 # -----------------------------------------------------------------------------
 # MERGE NODES
 # -----------------------------------------------------------------------------
@@ -32,8 +36,10 @@ def merge_nodes(epsg, original_path, secondary_path, out_path):
         pickle.dump(europe_nodes_merged, f, pickle.HIGHEST_PROTOCOL)
     print(datetime.datetime.now(), 'Nnodes in europe_nodes_dict' + str(epsg) + ': ' + str(len(europe_nodes_merged)))
     print('------------------------------------------------------------------------')
-merge_nodes('2056', original_path, secondary_path, out_path)
-merge_nodes('4326', original_path, secondary_path, out_path)
+    return europe_nodes_merged
+
+nodes_dict2056 = merge_nodes('2056', original_path, secondary_path, out_path)
+nodes_dict4326 = merge_nodes('4326', original_path, secondary_path, out_path)
 
 # -----------------------------------------------------------------------------
 # MERGE WAYS
@@ -51,7 +57,7 @@ print(datetime.datetime.now(), 'Nways in splitted_secondary_ways_dict : '+ str(l
 # merge splitted_ways_dicts
 
 europe_splitted_ways_merged = {**splitted_ways_dict, **splitted_secondary_ways_dict}
-with open(str(out_path) + '\europe_ways_splitted_dict' + '.pkl', 'wb') as f:
+with open(str(out_path) + '/europe_ways_splitted_dict' + '.pkl', 'wb') as f:
     pickle.dump(europe_splitted_ways_merged, f, pickle.HIGHEST_PROTOCOL)
 print(datetime.datetime.now(), 'Nways in europe_splitted_ways_merged: '+ str(len(europe_splitted_ways_merged)))
 print('------------------------------------------------------------------------')
@@ -101,4 +107,7 @@ print('------------------------------------------------------------------------'
 # MERGE GRAPHS
 # -----------------------------------------------------------------------------
 # This will create a graph from scratch with the merged dataframes
-create_graph_func(out_path, europe_ways_merged_df)
+create_graph_func(out_path, europe_ways_merged_df, nodes_dict2056, europe_splitted_ways_merged)
+
+print(datetime.datetime.now(), 'Merging of networks finished successfully, files in out_path')
+print('------------------------------------------------------------------------')
