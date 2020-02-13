@@ -11,6 +11,8 @@ from shapely.ops import transform
 import geopandas as gpd
 from shapely.geometry import Point, Polygon
 from progressbar import Percentage, ProgressBar, Bar, ETA
+
+
 '''
 02.08.2019
 from now:  
@@ -29,11 +31,18 @@ CHECK:
     run again routing
     compare results
 '''
+
+# insert here parser code for terminal running code with arguments
+# arguments to define:
+# paths: output, network_path, border_file, bc_path
+# thresholds: freight_min_value, bc_radius
+
 # -----------------------------------------------------------------------------
 # DEFINE OUT_PATH AND LOAD FILES
 # -----------------------------------------------------------------------------
-out_path = 'C:/Users/Ion/IVT/OSM_python/test/bc_official'
 network_path = 'C:/Users/Ion/IVT/OSM_python/merged_networks/ch1234'
+out_path = 'C:/Users/Ion/IVT/OSM_python/test/bc_official'
+# out_path = str(network_path) + '/bc_official'
 border_file = 'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp'
 bc_path = 'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv'
 
@@ -65,6 +74,7 @@ if os.path.isfile(str(out_path) + "/crossing_onlypoints.shp") is False:
     pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ', Percentage(), ' ', ETA()],
                        maxval=len(europe_network))
     # loops over all the ways defined in the network and keeps the coordinates and the new_id of the way crossing the ring
+    print(datetime.datetime.now(), 'Searching ways that intersect the Swiss border ...')
     for i in pbar(range(0, len(europe_network))):
         ls = europe_network.iloc[i]['geometry']
         point = ring.intersection(ls)
@@ -100,7 +110,6 @@ for i in range(0,len(official_df)):
     name = official_df.iloc[i]['Name']
     bc_id[nr] = name
 len(bc_id)
-
 
 # DROP ROWS with no data or which do not overpass an input record
 droprows=[]
@@ -290,9 +299,6 @@ def geolocate(x,y):
         pyproj.Proj('epsg:4326'),
         pyproj.Proj('epsg:2056'))
     point2056 = transform(project, point4326)
-#     point=Point(point2056.x,point2056.y)
-#     point4326 = (y,x)
-#     print (name, end="\r")
     return pd.Series([point2056])
     # return point2056
 
@@ -314,7 +320,7 @@ for i in range(0, len(ch_bc)):
 tree = spatial.KDTree(G_lonlat)
 # droprows = []
 
-def closest_bc(bc, rowname):
+def closest_bc(bc):
 # For each official border crossing defined in the step before the closest neighbour is found (later filtered if they are above 6km distance)
 # The important output of this function is the new_ids of the ways that are matched to the official border crossings (stored later as wayid_by_cp), so it can be checked on the routing
     new_ids = []
@@ -334,22 +340,19 @@ def closest_bc(bc, rowname):
     return pd.Series([coord, distance, new_ids, cp])
 
 crossings[['closest_bc', 'distance(m)', 'new_ids', 'cp_coords']] = crossings.apply(
-    lambda row: closest_bc(row['geometry'], row.name), axis=1)
+    lambda row: closest_bc(row['geometry']), axis=1)
 crossings = crossings.sort_values('distance(m)', ascending=False)
 # crossings = crossings[crossings['distance(m)']<6000] #filter of 6k
 # crossings = crossings[crossings['found_bc']== 1] #filter of found bc
 # crossings = crossings.sort_values('group', ascending=False)
 
 # export crossings info to a csv and shp file
-# crossings.to_csv(str(in_path) + "\\freight_data\\freight\\crossings_unofficial.csv", sep=",", index=None,
-#                  encoding='latin1')
 crossings.to_csv(str(out_path) + "/crossings_unofficial.csv", sep=",", index=None,
                  encoding='latin1')
 gdf = gpd.GeoDataFrame(crossings)
-# gdf[['Nr.', 'Name', 'geometry']].to_file(str(in_path) + "\\freight_data\\freight\\crossings_unofficial.shp")
 gdf[['Nr.', 'Name', 'geometry']].to_file(str(out_path) + "/crossings_unofficial.shp")
 
-print(datetime.datetime.now(), len(crossings))
+print(datetime.datetime.now(), 'Crossing points in crossings dataframe: ' + str(len(crossings)))
 crossings.head()
 
 # For an easier later comparison, a dictionary is created containing data of the border crossings, this will be loaded in the routing code
@@ -374,9 +377,9 @@ for i in range(0, len(crossings)):
         coord_list.append([station_id, name, new_id, distance, Point(coord)])
 
 # EXPORT nuts_centroid_dict TO FILE
-with open(str(out_path) + '\wayidbycp_dict' + '.pkl', 'wb') as f:
+with open(str(out_path) + '/wayidbycp_dict' + '.pkl', 'wb') as f:
     pickle.dump(wayid_by_cp, f, pickle.HIGHEST_PROTOCOL)
-print(datetime.datetime.now(), len(wayid_by_cp))
+print(datetime.datetime.now(),  'New_ids in wayid_by_cp: ' + str(len(wayid_by_cp)))
 
 # dataframe bc_df contains all the information of the final border crossings with all the matches from the network
 bc_df = pd.DataFrame.from_records(coord_list, columns=[
@@ -388,8 +391,8 @@ bc_df.to_csv(str(out_path) + "/bc_df.csv", sep=",", index=None, encoding='latin1
 gdf = gpd.GeoDataFrame(bc_df)
 gdf.to_file(str(out_path) + "/bc_df.shp", encoding='latin1')
 
-print(datetime.datetime.now(), len(bc_df))
-print(datetime.datetime.now(), len(rep_ids))
+print(datetime.datetime.now(), 'Border crossings in bc_df: ' + str(len(bc_df)))
+print(datetime.datetime.now(), 'New_ids repeated in rep_ids: ' + str(len(rep_ids)))
 gdf.head()
 
 # -----------------------------------------------------------------------------
@@ -411,9 +414,9 @@ all_newids = list(ch_bc.new_id)  # all crossings found in the network
 elected_newids = list(
     bc_df.new_id)  # the ones that have passed all the filters and match the official border crossings from the freight data
 none_elected = [newid for newid in all_newids if newid not in elected_newids]
-print(datetime.datetime.now(), len(all_newids))
-print(datetime.datetime.now(), len(elected_newids))
-print(datetime.datetime.now(), len(none_elected))
+print(datetime.datetime.now(), 'All new_ids: ' + str(len(all_newids)))
+print(datetime.datetime.now(), 'Elected new_ids: ' + str(len(elected_newids)))
+print(datetime.datetime.now(), 'Non elected new_ids: ' + str(len(none_elected)))
 
 # remove none_elected edges from graph and export
 deleted_edges = 0
