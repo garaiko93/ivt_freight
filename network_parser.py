@@ -88,7 +88,7 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
     # raw_file = 'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2'
     # out_path = 'C:/Users/Ion/IVT/OSM_python/test/lie'
     # shp_path = 'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp'
-
+    out_path = str(out_path) + '/network_files'
     if not os.path.exists(str(out_path)):
         os.makedirs(str(out_path))
         print(datetime.datetime.now(), 'Directory created')
@@ -100,9 +100,9 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
     # SPLIT OSM FILE IN FILES FOR: NODES, WAYS AND RELATIONS
     # -----------------------------------------------------------------------------
     # by reading the selected file line by line, for each xml element type this code splits the 3 of them in 3 different files for: NODES, WAYS and RELATIONS elements
-    if os.path.isfile(str(out_path) + "\europe-latest_nodes.osm.bz2") == False and \
-            os.path.isfile(str(out_path) + "\europe-latest_ways.osm.bz2") == False and \
-            os.path.isfile(str(out_path) + "\europe-latest_relations.osm.bz2") == False:
+    if os.path.isfile(str(out_path) + "/europe-latest_nodes.osm.bz2") == False and \
+            os.path.isfile(str(out_path) + "/europe-latest_ways.osm.bz2") == False and \
+            os.path.isfile(str(out_path) + "/europe-latest_relations.osm.bz2") == False:
         print(datetime.datetime.now(), 'Splitting Raw OSM file into nodes-ways-relations ...')
         node_check = 0
         way_check = 0
@@ -112,9 +112,9 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         lines_relations = 0
         lines_europe = 0
         with bz2file.open(str(raw_file)) as f:
-            with bz2file.open(str(out_path) + "\europe-latest_nodes.osm.bz2", 'wb') as f1:
-                with bz2file.open(str(out_path) + "\europe-latest_ways.osm.bz2", 'wb') as f2:
-                    with bz2file.open(str(out_path) + "\europe-latest_relations.osm.bz2", 'wb') as f3:
+            with bz2file.open(str(out_path) + "/europe-latest_nodes.osm.bz2", 'wb') as f1:
+                with bz2file.open(str(out_path) + "/europe-latest_ways.osm.bz2", 'wb') as f2:
+                    with bz2file.open(str(out_path) + "/europe-latest_relations.osm.bz2", 'wb') as f3:
                         for line in f:
                             # bar.update(line)
                             lines_europe += 1
@@ -183,7 +183,7 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
                                     ETA()], maxval=lines_ways)
 
         # this part of the code reads the WAYS file previously created line by line, taking the information that is relevant from its attributes and children elements
-        with bz2file.open(str(out_path) + "\europe-latest_ways.osm.bz2") as f:
+        with bz2file.open(str(out_path) + "/europe-latest_ways.osm.bz2") as f:
             # for line in f:
             for line in pbar(f):
                 if b"<way" in line:
@@ -549,6 +549,8 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
 
         gdf[["new_id", "geometry","start_node_id","end_node_id","length(m)","time(s)"]].to_file(str(out_path)+"/gdf_MTP_europe.shp")
         gdf.to_csv(str(out_path)+"/gdf_MTP_europe.csv", sep = ",", index = None)
+
+        gdf = pd.read_csv(str(out_path) + '/gdf_MTP_europe.csv') #this is not necessary but to avoid an error later
 
         print(datetime.datetime.now(), 'Final geodataframe created with linestrings and exported: ' + str(len(gdf)))
         print('------------------------------------------------------------------------')

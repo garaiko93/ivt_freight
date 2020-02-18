@@ -23,7 +23,7 @@ def create_shp_largest(G, list_nodes, nodes_dict, splitted_ways_dict, gdf, out_p
                                                                      splitted_ways_dict,
                                                                      nodes_dict), axis=1)
     intersected_gdf = gpd.GeoDataFrame(intersected_df)
-    intersected_gdf.to_file(str(out_path) + "/" + str(filename) + ".shp")
+    intersected_gdf.to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
 
     print(datetime.datetime.now(), 'Shp file created successfully with ' + str(len(intersected_df)) + ' ways.')
 

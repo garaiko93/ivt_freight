@@ -3,6 +3,8 @@
 import datetime
 from network_parser import parse_network
 from create_graph import create_graph_func
+from merge_networks import merge_networks_funct
+from bc_official import find_bc
 import argparse
 
 print(datetime.datetime.now(), 'Main script begins')
@@ -55,47 +57,34 @@ parse_network(raw_file='C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2',
 # -------------------------------------------------------------------------------------------------------------
 # MERGE NETWORKS
 # -------------------------------------------------------------------------------------------------------------
-
-# create_graph_func(network_path=d['out_path'])
-# create_graph_func(network_path='C:/Users/Ion/IVT/OSM_python/test/lie')
-
-# -------------------------------------------------------------------------------------------------------------
-# PARSE AND CREATE POPULATION DATABASE FROM XML FILE
-# -------------------------------------------------------------------------------------------------------------
-# '''
-# Population filtering by an XML parser:
-# This function returns in the output directory both, attributes and plans dictionaries and csv files
-# of homogeneus data
-# 1. Attributes: normal population is defined by 10 attributes, freight with 3 attributes
-# 2. Plans: every tuple means every trip, with information of origin and destination points and the transport
-# Needed arguments: 1. Directory containing the compressed scenario file population file (i.e.: r"C:\Users\...\data\scenarios\")
-#                   2. Output directory to save new files
-#                   3. Scenario (i.e. 'switzerland_1pm', 'switzerland_1pct', 'switzerland_10pct'
-# '''
-# pop_list = ['switzerland_1pm', 'switzerland_1pct', 'switzerland_10pct']
-# for pop in pop_list:
-#     population_parser_line(r'C:\Users\Ion\TFM\data\scenarios',
-#                            r'C:\Users\Ion\TFM\data\population_db/test',
-#                            pop)
+# merge_networks_funct(original_path, secondary_path, out_path)
+merge_networks_funct('/cluster/home/gaion/freight/networks/ch123/network_files',
+                     '/cluster/home/gaion/freight/networks/lie123/network_files',
+                     '/cluster/home/gaion/freight/networks/chlie123/network_files')
 
 # -------------------------------------------------------------------------------------------------------------
-# CREATE AND ANALYSE EVERY STUDY AREA
+# FIND SWISS BORDER CROSSINGS WITH THE NETWORK
 # -------------------------------------------------------------------------------------------------------------
-# '''
-# From the created graphs (ch_MultiDiGraph_bytime_largest.gpickle/ch_DiGraph_bytime_largest.gpickle)
-# and given different study areas in shape files stored in the same directory
-# but each on a different folder (for the output files)
-# Needed arguments: 1. Directory containing the folders with the study areas (i.e.: r"C:\Users\...\network")
-#                   2. Directory of out_path from create_graph() where graph and nodes_dict files are
-#                   (i.e.: r"C:\Users\...\network\graph.gpickle")
-# '''
-# filter_graph(r"C:\Users\Ion\TFM\data\study_areas",
-#              r"C:\Users\Ion\TFM\data\network_graphs")
+# find_bc(network_path, border_file, bc_data)
+find_bc('/cluster/home/gaion/freight/networks/ch123/network_files',
+        '/cluster/home/gaion/freight/data/bci_path.shp',
+        '/cluster/home/gaion/freight/networks/chlie123/network_files')
 
-# print(options.study_areas)
-# print(options.network_graphs)
-#
-#
-# filter_graph(options.study_areas, options.network_graphs)
+# -------------------------------------------------------------------------------------------------------------
+# MANIPULATE FREIGHT DATA FOR ROUTING
+# -------------------------------------------------------------------------------------------------------------
+# europe_data(out_path, graph_path, nuts_path, europe_data_path)
+europe_data('/cluster/home/gaion/freight/networks/ch123/freight_data',
+            '/cluster/home/gaion/freight/data/bci_path.shp',
+            '/cluster/home/gaion/freight/networks/chlie123/network_files')
+
+# -------------------------------------------------------------------------------------------------------------
+# ROUTING
+# -------------------------------------------------------------------------------------------------------------
+# find_bc(network_path, border_file, bc_data)
+find_bc('/cluster/home/gaion/freight/networks/ch123/network_files',
+        '/cluster/home/gaion/freight/data/bci_path.shp',
+        '/cluster/home/gaion/freight/networks/chlie123/network_files')
+
 
 print(datetime.datetime.now(), 'Main script ends')
