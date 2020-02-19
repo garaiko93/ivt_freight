@@ -12,6 +12,7 @@ from shapely.ops import transform
 from shapely.geometry import Point
 import shapely.geometry as geo
 import datetime
+import ntpath
 from create_graph import create_graph_func
 
 def ms_func(tag_value, ms_strings):
@@ -84,11 +85,11 @@ def sw_nodes(new_id, splitted_ways_dict, nodes_dict):
     line = geo.LineString(coord_list)
     return line
 
-def parse_network(raw_file, out_path, shp_file=None, export_files = True):
+def parse_network(raw_file, out_path, highway_types = 123, shp_file=None, export_files = True):
     # raw_file = 'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2'
     # out_path = 'C:/Users/Ion/IVT/OSM_python/test/lie'
     # shp_path = 'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp'
-    out_path = str(out_path) + '/network_files'
+    # out_path = str(out_path) + '/network_files'
     if not os.path.exists(str(out_path)):
         os.makedirs(str(out_path))
         print(datetime.datetime.now(), 'Directory created')
@@ -96,13 +97,27 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         print(datetime.datetime.now(), 'Directory exists')
     print('------------------------------------------------------------------------')
 
+    # Unpack highway types into list:
+    highway_tags = {
+        1: 'motorway',
+        2: 'trunk',
+        3: 'primary',
+        4: 'secondary',
+        5: 'tertiary',
+        6: 'unclassified',
+        7: 'residential'
+    }
+    filter_highways = [highway_tags[int(d)] for d in str(highway_types)]
+
     # -----------------------------------------------------------------------------
     # SPLIT OSM FILE IN FILES FOR: NODES, WAYS AND RELATIONS
     # -----------------------------------------------------------------------------
+    rawfile_name = ntpath.split(raw_file)[1].split('-')[0]
+    rawfile_path = ntpath.split(raw_file)[0]
     # by reading the selected file line by line, for each xml element type this code splits the 3 of them in 3 different files for: NODES, WAYS and RELATIONS elements
-    if os.path.isfile(str(out_path) + "/europe-latest_nodes.osm.bz2") == False and \
-            os.path.isfile(str(out_path) + "/europe-latest_ways.osm.bz2") == False and \
-            os.path.isfile(str(out_path) + "/europe-latest_relations.osm.bz2") == False:
+    if os.path.isfile(str(rawfile_path) + "/" + str(rawfile_name) + "-latest_nodes.osm.bz2") is False and \
+            os.path.isfile(str(rawfile_path) + "/" + str(rawfile_name) + "-latest_ways.osm.bz2") is False and \
+            os.path.isfile(str(rawfile_path) + "/" + str(rawfile_name) + "-latest_relations.osm.bz2") is False:
         print(datetime.datetime.now(), 'Splitting Raw OSM file into nodes-ways-relations ...')
         node_check = 0
         way_check = 0
@@ -143,12 +158,12 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         lines['lines_ways'] = lines_ways
         lines['lines_relations'] = lines_relations
         lines['lines_europe'] = lines_europe
-        with open(str(out_path) + '/lines.pkl', 'wb') as f:
+        with open(str(rawfile_path) + '/' + str(rawfile_name) + '_lines.pkl', 'wb') as f:
             pickle.dump(lines, f, pickle.HIGHEST_PROTOCOL)
         print(datetime.datetime.now(), 'Raw OSM file splitted into nodes-ways-relations files correctly')
         print('------------------------------------------------------------------------')
     else:
-        file = open(str(out_path) + "/lines.pkl", 'rb')
+        file = open(str(rawfile_path) + '/' + str(rawfile_name) + '_lines.pkl', 'rb')
         lines = pickle.load(file)
         lines_nodes = lines['lines_nodes']
         lines_ways = lines['lines_ways']
@@ -183,7 +198,7 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
                                     ETA()], maxval=lines_ways)
 
         # this part of the code reads the WAYS file previously created line by line, taking the information that is relevant from its attributes and children elements
-        with bz2file.open(str(out_path) + "/europe-latest_ways.osm.bz2") as f:
+        with bz2file.open(str(rawfile_path) + "/" + str(rawfile_name) + "-latest_ways.osm.bz2") as f:
             # for line in f:
             for line in pbar(f):
                 if b"<way" in line:
@@ -229,53 +244,55 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
                     if b"</way>" in line:
                         # by changing the way_type on this condition it can be chosen the ways that will be saved
                         # as output from the original OSM file
-                        if ('motorway' in way_type) or ('trunk' in way_type) or ('primary' in way_type):
-                        # if 'secondary' in way_type:
-                        # SET VALUE OF MAXSPEED by different tries, if nothing found, set by default
-                            if way_maxspeed is None:
-                                ms = [way_maxspeed_f, way_maxspeed_b]
-                                ms = [x for x in ms if x is not None]
-                                try:
-                                    way_maxspeed = max(ms)
-                                except:
-                                    # SET DEFAULT VALUES
-                                    nonspeed_ways += 1
-                                    if way_type == 'motorway':
-                                        way_maxspeed = 120
-                                    elif way_type == 'motorway_link':
-                                        way_maxspeed = 80
-                                    elif way_type == 'trunk':
-                                        way_maxspeed = 80
-                                    elif way_type == 'trunk_link':
-                                        way_maxspeed = 50
-                                    elif way_type == 'primary':
-                                        way_maxspeed = 80
-                                    elif way_type == 'primary_link':
-                                        way_maxspeed = 60
-                                    elif way_type == 'secondary':
-                                        way_maxspeed = 30
-                                    elif way_type == 'secondary_link':
-                                        way_maxspeed = 30
-                                    elif way_type == 'tertiary':
-                                        way_maxspeed = 25
-                                    elif way_type == 'tertiary_link':
-                                        way_maxspeed = 25
+                        for way in filter_highways:
+                            if way in way_type:
+                                # if ('motorway' in way_type) or ('trunk' in way_type) or ('primary' in way_type):
+                                # if 'secondary' in way_type:
+                                # SET VALUE OF MAXSPEED by different tries, if nothing found, set by default
+                                if way_maxspeed is None:
+                                    ms = [way_maxspeed_f, way_maxspeed_b]
+                                    ms = [x for x in ms if x is not None]
+                                    try:
+                                        way_maxspeed = max(ms)
+                                    except:
+                                        # SET DEFAULT VALUES
+                                        nonspeed_ways += 1
+                                        if way_type == 'motorway':
+                                            way_maxspeed = 120
+                                        elif way_type == 'motorway_link':
+                                            way_maxspeed = 80
+                                        elif way_type == 'trunk':
+                                            way_maxspeed = 80
+                                        elif way_type == 'trunk_link':
+                                            way_maxspeed = 50
+                                        elif way_type == 'primary':
+                                            way_maxspeed = 80
+                                        elif way_type == 'primary_link':
+                                            way_maxspeed = 60
+                                        elif way_type == 'secondary':
+                                            way_maxspeed = 30
+                                        elif way_type == 'secondary_link':
+                                            way_maxspeed = 30
+                                        elif way_type == 'tertiary':
+                                            way_maxspeed = 25
+                                        elif way_type == 'tertiary_link':
+                                            way_maxspeed = 25
 
-                            start_node_id = waynodes_list[0]  # first node of the list
-                            end_node_id = waynodes_list[len(waynodes_list) - 1]  # last node of the list
+                                start_node_id = waynodes_list[0]  # first node of the list
+                                end_node_id = waynodes_list[len(waynodes_list) - 1]  # last node of the list
 
-                            # data of each way stored, saved in dictionary being the key the way_id
-                            way_data = [way_type, way_maxspeed, waynodes_list, way_maxspeed_f, way_maxspeed_b,
-                                        speed_val, oneway, lanes, lanes_f, lanes_b]
-                            ways_dict[int(way_id)] = way_data
+                                # data of each way stored, saved in dictionary being the key the way_id
+                                way_data = [way_type, way_maxspeed, waynodes_list, way_maxspeed_f, way_maxspeed_b,
+                                            speed_val, oneway, lanes, lanes_f, lanes_b]
+                                ways_dict[int(way_id)] = way_data
 
-                            # add every node of the way to a list (even if they are repeated) for future manipulating, see if they are repeated is too expensive
-                            for i in waynodes_list:
-                                nodes_of_ways.append(i)
+                                # add every node of the way to a list (even if they are repeated) for future manipulating, see if they are repeated is too expensive
+                                for i in waynodes_list:
+                                    nodes_of_ways.append(i)
 
-                            # same as dictionary, but this could be avoided
-                            ways.append((int(way_id), int(start_node_id), int(end_node_id), waynodes_list, way_type,
-                                         way_maxspeed))
+                                # same as dictionary, but this could be avoided
+                                ways.append((int(way_id), int(start_node_id), int(end_node_id), waynodes_list, way_type,
+                                             way_maxspeed))
 
                         waynodes_list = []
                         tag_list = []
@@ -321,7 +338,7 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
     # -----------------------------------------------------------------------------
     # NODES
     # -----------------------------------------------------------------------------
-    if os.path.isfile(str(out_path) + "/europe_nodes_dict2056.pkl") == False:
+    if os.path.isfile(str(out_path) + "/europe_nodes_dict4326.pkl") == False:
         print(datetime.datetime.now(), 'Parsing nodes from OSM xml file ...')
         pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
                                     Percentage(), ' ',
@@ -330,7 +347,7 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
             ch_border30k = gpd.read_file(str(shp_file))
         nodes_europe = {}
         i = 0
-        with bz2file.open(str(out_path) + "/europe-latest_nodes.osm.bz2") as f:
+        with bz2file.open(str(rawfile_path) + "/" + str(rawfile_name) + "-latest_nodes.osm.bz2") as f:
             # reading line by line the 'nodes' file created at the beginning,
             # data for each node fulfilling the conditions are stored for the output
             for line in pbar(f):
@@ -361,7 +378,13 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
         # EXPORT nodes_europe (dictionary) TO FILE
         with open(str(out_path) + '/europe_nodes_dict4326' + '.pkl', 'wb') as f:
             pickle.dump(nodes_europe, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        file = open(str(out_path) + "/europe_nodes_dict4326.pkl", 'rb')
+        nodes_europe = pickle.load(file)
+        print(datetime.datetime.now(),
+              'Nodes_europe_4326 already exist in out_path, loaded: ' + str(len(nodes_europe)))
 
+    if os.path.isfile(str(out_path) + "/europe_nodes_dict2056.pkl") == False:
         # translate them to coordinate system 2056  from 4326
         print(datetime.datetime.now(), 'Transforming nodes coordinates system to epsg:2056 ...')
         pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
@@ -385,9 +408,6 @@ def parse_network(raw_file, out_path, shp_file=None, export_files = True):
     else:
         file = open(str(out_path) + "/europe_nodes_dict2056.pkl", 'rb')
         nodes_europe_2056 = pickle.load(file)
-
-        # file = open(str(out_path) + "/europe_nodes_dict4326.pkl", 'rb')
-        # nodes_europe = pickle.load(file)
 
         print(datetime.datetime.now(), 'Nodes_europe_2056 already exist in out_path, loaded: ' + str(len(nodes_europe_2056)))
         print('------------------------------------------------------------------------')

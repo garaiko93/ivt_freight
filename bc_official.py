@@ -39,6 +39,8 @@ CHECK:
 
 
 def find_bc(network_path, border_file, bc_path):
+
+    print(datetime.datetime.now(), 'Border crossing search begins ...')
     # -----------------------------------------------------------------------------
     # DEFINE OUT_PATH AND LOAD FILES
     # -----------------------------------------------------------------------------

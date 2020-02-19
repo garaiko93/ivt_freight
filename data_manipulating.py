@@ -34,11 +34,7 @@ from progressbar import Percentage, ProgressBar, Bar, ETA
 # border_poly_path = r"C:/Users/Ion/IVT/OSM_python/\switzerland/ch_bordercrossings/swiss_border"
 # europe_data_path = r"C:/Users/Ion/IVT/OSM_python/freight_data/freight/gqgv/GQGV_2014/GQGV_2014_Mikrodaten.csv"
 
-if not os.path.exists(str(out_path)):
-    os.makedirs(str(out_path))
-    print(datetime.datetime.now(), 'Directory created')
-else:
-    print(datetime.datetime.now(), 'Directory exists, change name of attempt output directory')
+
 
 # -----------------------------------------------------------------------------
 # LOAD NECESSARY FILES FOR DATA MANIPULATION
@@ -87,10 +83,10 @@ else:
 # print('Nplz in plz_ch: '+ str(len(plz_ch)))
 
 # load swiss border shapefile
-ch_border_shp = gpd.read_file(str(border_poly_path))
+# ch_border_shp = gpd.read_file(str(border_poly_path))
 # ch_border_shp = gpd.read_file(str(in_path) + "\switzerland\ch_bordercrossings\swiss_border\g2l19.shp")
 # ch_border_shp = gpd.read_file(str(in_path) + "\\switzerland\\ch_bordercrossings\\swiss_border\\bci_polygon.shp")
-ch_border = ch_border_shp['geometry'][0]
+# ch_border = ch_border_shp['geometry'][0]
 # ch_border
 
 # -----------------------------------------------------------------------------
@@ -100,8 +96,16 @@ ch_border = ch_border_shp['geometry'][0]
 
 
 def europe_data(network_path, nuts_path, europe_data_path):
+    print(datetime.datetime.now(), 'Europe data manipulating begins ...')
     out_path = str(network_path) + '/freight_data'
     graph_path = str(network_path) + '/bc_official/eu_network_graph_with_official_bc.gpickle'
+
+    if not os.path.exists(str(out_path)):
+        os.makedirs(str(out_path))
+        print(datetime.datetime.now(), 'Directory created')
+    else:
+        print(datetime.datetime.now(), 'Directory exists, change name of attempt output directory')
+
     if os.path.isfile(str(out_path) + '/nuts_europe_dict.pkl') == False:
         # load shape files of NUTS for each year
         cols = ['NUTS_ID', 'LEVL_CODE', 'CNTR_CODE', 'NUTS_NAME', 'FID', 'geometry']

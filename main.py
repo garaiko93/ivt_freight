@@ -1,11 +1,15 @@
 # import sys
 # sys.path.insert(0, 'codes')
 import datetime
+import argparse
+
+#  my functions
 from network_parser import parse_network
-from create_graph import create_graph_func
+# from create_graph import create_graph_func
 from merge_networks import merge_networks_funct
 from bc_official import find_bc
-import argparse
+from data_manipulating import europe_data
+
 
 print(datetime.datetime.now(), 'Main script begins')
 
@@ -44,47 +48,79 @@ print(datetime.datetime.now(), 'Main script begins')
 # (i.e.: "C:/Users/.../bci_polygon30k_4326.shp'")
 # '''
 
+#         1: 'motorway',
+#         2: 'trunk',
+#         3: 'primary',
+#         4: 'secondary',
+#         5: 'tertiary',
+#         6: 'unclassified',
+#         7: 'residential'
+
 # parse_network(raw_file=d['raw_file'],
 #               out_path=d['out_path'],
 #               shp_file=d['shp_file'],
 #               export_files=d['export_files'])
-parse_network(raw_file='C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2',
-              out_path='C:/Users/Ion/IVT/OSM_python/test/lie/MTP',
+# parse_network(raw_file='/cluster/home/gaion/freight/data/switzerland-latest.osm.bz2',
+#               out_path='/cluster/home/gaion/freight/networks/ch4/network_files',
+#               highway_types=4,
+#               shp_file=None,
+#               export_files=True)
+parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/switzerland-latest.osm.bz2',
+              out_path=r'C:/Users/Ion/IVT/OSM_python/test/ch4/network_files',
+              highway_types=4,
               shp_file=None,
               export_files=True)
-              # shp_file='C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp'
 
 # -------------------------------------------------------------------------------------------------------------
 # MERGE NETWORKS
 # -------------------------------------------------------------------------------------------------------------
-# merge_networks_funct(original_path, secondary_path, out_path)
-merge_networks_funct('/cluster/home/gaion/freight/networks/ch123/network_files',
-                     '/cluster/home/gaion/freight/networks/lie123/network_files',
-                     '/cluster/home/gaion/freight/networks/chlie123/network_files')
+# merge_networks_funct(original_path,
+#                      secondary_path,
+#                      out_path)
+# merge_networks_funct(original_path='/cluster/home/gaion/freight/networks/ch4/network_files',
+#                      secondary_path='/cluster/home/gaion/freight/networks/eu123/network_files',
+#                      out_path='/cluster/home/gaion/freight/networks/eu123ch4/network_files')
+
+merge_networks_funct(original_path=r'C:/Users/Ion/IVT/OSM_python/europe/europe_network',
+                     secondary_path=r'C:/Users/Ion/IVT/OSM_python/test/ch4/network_files',
+                     out_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/network_files')
 
 # -------------------------------------------------------------------------------------------------------------
 # FIND SWISS BORDER CROSSINGS WITH THE NETWORK
 # -------------------------------------------------------------------------------------------------------------
 # find_bc(network_path, border_file, bc_data)
-find_bc('/cluster/home/gaion/freight/networks/ch123/network_files',
-        '/cluster/home/gaion/freight/data/bci_path.shp',
-        '/cluster/home/gaion/freight/networks/chlie123/network_files')
+# find_bc(network_path='/cluster/home/gaion/freight/networks/eu123ch4/network_files',
+#         border_file='/cluster/home/gaion/freight/data/bci_path.shp',
+#         bc_data='/cluster/home/gaion/freight/data/official_counting_ot.csv')
+find_bc(network_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/network_files',
+        border_file=r'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp',
+        bc_data=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv')
 
 # -------------------------------------------------------------------------------------------------------------
 # MANIPULATE FREIGHT DATA FOR ROUTING
 # -------------------------------------------------------------------------------------------------------------
 # europe_data(out_path, graph_path, nuts_path, europe_data_path)
-europe_data('/cluster/home/gaion/freight/networks/ch123/freight_data',
-            '/cluster/home/gaion/freight/data/bci_path.shp',
-            '/cluster/home/gaion/freight/networks/chlie123/network_files')
+# europe_data(out_path='/cluster/home/gaion/freight/networks/eu123ch4/freight_data',
+#             graph_path='/cluster/home/gaion/freight/networks/eu123ch4/bc_official',
+#             nuts_path='/cluster/home/gaion/freight/data/nuts_borders',
+#             europe_data_path='/cluster/home/gaion/freight/data/GQGV_2014_Mikrodaten.csv')
+europe_data(out_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/freight_data',
+            graph_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/bc_official',
+            nuts_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/nuts_borders/nuts_borders",
+            europe_data_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/freight/gqgv/GQGV_2014/GQGV_2014_Mikrodaten.csv")
 
 # -------------------------------------------------------------------------------------------------------------
 # ROUTING
 # -------------------------------------------------------------------------------------------------------------
-# find_bc(network_path, border_file, bc_data)
-find_bc('/cluster/home/gaion/freight/networks/ch123/network_files',
-        '/cluster/home/gaion/freight/data/bci_path.shp',
-        '/cluster/home/gaion/freight/networks/chlie123/network_files')
+# routing(network_path, border_file, bc_data)
+# rounting('/cluster/home/gaion/freight/networks/ch123/network_files',
+#         '/cluster/home/gaion/freight/data/bci_path.shp',
+#         '/cluster/home/gaion/freight/networks/chlie123/network_files')
+
+# -------------------------------------------------------------------------------------------------------------
+# ANALYSE RESULTS OF ROUTING
+# -------------------------------------------------------------------------------------------------------------
+#
 
 
 print(datetime.datetime.now(), 'Main script ends')

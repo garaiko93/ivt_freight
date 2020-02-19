@@ -23,9 +23,11 @@ def create_shp_largest(G, list_nodes, nodes_dict, splitted_ways_dict, gdf, out_p
                                                                      splitted_ways_dict,
                                                                      nodes_dict), axis=1)
     intersected_gdf = gpd.GeoDataFrame(intersected_df)
-    intersected_gdf.to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
+    # intersected_gdf['start_node_id', 'end_node_id', 'new_id','geometry'].to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
+    intersected_gdf['geometry'].to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
 
     print(datetime.datetime.now(), 'Shp file created successfully with ' + str(len(intersected_df)) + ' ways.')
+
 
 def sw_nodes(new_id, splitted_ways_dict, nodes_dict):
     coord_list = []
@@ -34,6 +36,7 @@ def sw_nodes(new_id, splitted_ways_dict, nodes_dict):
         coord_list.append(nodes_dict[int(node)])
     line = geo.LineString(coord_list)
     return line
+
 
 def create_graph_func(out_path, gdf, nodes_dict, splitted_ways_dict):
     if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") == False:

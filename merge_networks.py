@@ -8,6 +8,7 @@ from create_graph import create_graph_func
 
 
 def merge_networks_funct(original_path, secondary_path, out_path):
+    print(datetime.datetime.now(), 'Merging networks process begins ...')
 # original_path = r'C:/Users/Ion/IVT/OSM_python/test/lie/MTP'
 # secondary_path = r'C:/Users/Ion/IVT/OSM_python/test/lie/S'
 # out_path = r'C:/Users/Ion/IVT/OSM_python/test/lie/merged/network'
@@ -48,6 +49,7 @@ def merge_networks_funct(original_path, secondary_path, out_path):
     # -----------------------------------------------------------------------------
     # MERGE WAYS
     # -----------------------------------------------------------------------------
+    print(datetime.datetime.now(), 'Merging splitted ways dictionaries')
     #IMPORT splitted_ways_dict
     file = open(str(original_path) + "/europe_ways_splitted_dict.pkl",'rb')
     splitted_ways_dict = pickle.load(file)
@@ -81,6 +83,7 @@ def merge_networks_funct(original_path, secondary_path, out_path):
     # -----------------------------------------------------------------------------
     # MERGE WAYS CSV
     # -----------------------------------------------------------------------------
+    print(datetime.datetime.now(), 'Merging ways.csv')
     # IMPORT gdf_MTP_europe.csv
     europe_ways_df = pd.read_csv(str(original_path) + "/gdf_MTP_europe.csv", low_memory=False)
     print(datetime.datetime.now(), 'Nways in europe_ways_df : ' + str(len(europe_ways_df)))
@@ -95,6 +98,7 @@ def merge_networks_funct(original_path, secondary_path, out_path):
     # -----------------------------------------------------------------------------
     # MERGE WAYS SHP
     # -----------------------------------------------------------------------------
+    print(datetime.datetime.now(), 'Merging ways shp file')
     # IMPORT europe_ways_gdf
     europe_ways_gdf = gpd.read_file(str(original_path) + "/gdf_MTP_europe.shp")
     print(datetime.datetime.now(), 'Nways in europe_ways_gdf: ' + str(len(europe_ways_gdf)))
@@ -110,6 +114,7 @@ def merge_networks_funct(original_path, secondary_path, out_path):
     # -----------------------------------------------------------------------------
     # MERGE GRAPHS
     # -----------------------------------------------------------------------------
+    print(datetime.datetime.now(), 'Merging graph')
     # This will create a graph from scratch with the merged dataframes
     create_graph_func(out_path, europe_ways_merged_df, nodes_dict2056, europe_splitted_ways_merged)
 
