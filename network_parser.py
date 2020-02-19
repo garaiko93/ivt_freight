@@ -176,7 +176,7 @@ def parse_network(raw_file, out_path, highway_types = 123, shp_file=None, export
     # WAYS
     # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/europe_ways_dict.pkl") == False:
-        print(datetime.datetime.now(), 'Parsing ways from OSM xml file ...')
+        print(datetime.datetime.now(), 'Parsing ' + str(filter_highways) + ' ways from OSM xml file ...')
         ways = []
         way_check = 0
         ways_count = 0

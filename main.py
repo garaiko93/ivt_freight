@@ -65,11 +65,21 @@ print(datetime.datetime.now(), 'Main script begins')
 #               highway_types=4,
 #               shp_file=None,
 #               export_files=True)
-parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/switzerland-latest.osm.bz2',
-              out_path=r'C:/Users/Ion/IVT/OSM_python/test/ch4/network_files',
-              highway_types=4,
-              shp_file=None,
-              export_files=True)
+# parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/switzerland-latest.osm.bz2',
+#               out_path=r'C:/Users/Ion/IVT/OSM_python/test/ch4/network_files',
+#               highway_types=4,
+#               shp_file=None,
+#               export_files=True)
+# parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/switzerland-latest.osm.bz2',
+#               out_path=r'C:/Users/Ion/IVT/OSM_python/test/ch1/network_files',
+#               highway_types=1,
+#               shp_file=None,
+#               export_files=True)
+# parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/switzerland-latest.osm.bz2',
+#               out_path=r'C:/Users/Ion/IVT/OSM_python/test/ch2/network_files',
+#               highway_types=2,
+#               shp_file=None,
+#               export_files=True)
 
 # -------------------------------------------------------------------------------------------------------------
 # MERGE NETWORKS
@@ -81,9 +91,9 @@ parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/switzerland-latest.osm.bz2',
 #                      secondary_path='/cluster/home/gaion/freight/networks/eu123/network_files',
 #                      out_path='/cluster/home/gaion/freight/networks/eu123ch4/network_files')
 
-merge_networks_funct(original_path=r'C:/Users/Ion/IVT/OSM_python/europe/europe_network',
-                     secondary_path=r'C:/Users/Ion/IVT/OSM_python/test/ch4/network_files',
-                     out_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/network_files')
+# merge_networks_funct(original_path=r'C:/Users/Ion/IVT/OSM_python/test/ch1/network_files',
+#                      secondary_path=r'C:/Users/Ion/IVT/OSM_python/test/ch2/network_files',
+#                      out_path=r'C:/Users/Ion/IVT/OSM_python/test/ch12/network_files')
 
 # -------------------------------------------------------------------------------------------------------------
 # FIND SWISS BORDER CROSSINGS WITH THE NETWORK
@@ -91,10 +101,10 @@ merge_networks_funct(original_path=r'C:/Users/Ion/IVT/OSM_python/europe/europe_n
 # find_bc(network_path, border_file, bc_data)
 # find_bc(network_path='/cluster/home/gaion/freight/networks/eu123ch4/network_files',
 #         border_file='/cluster/home/gaion/freight/data/bci_path.shp',
-#         bc_data='/cluster/home/gaion/freight/data/official_counting_ot.csv')
-find_bc(network_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/network_files',
+#         bc_path='/cluster/home/gaion/freight/data/official_counting_ot.csv')
+find_bc(network_path=r'C:/Users/Ion/IVT/OSM_python/test/ch1234',
         border_file=r'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp',
-        bc_data=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv')
+        bc_path=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv')
 
 # -------------------------------------------------------------------------------------------------------------
 # MANIPULATE FREIGHT DATA FOR ROUTING
@@ -104,8 +114,11 @@ find_bc(network_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/network_files',
 #             graph_path='/cluster/home/gaion/freight/networks/eu123ch4/bc_official',
 #             nuts_path='/cluster/home/gaion/freight/data/nuts_borders',
 #             europe_data_path='/cluster/home/gaion/freight/data/GQGV_2014_Mikrodaten.csv')
-europe_data(out_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/freight_data',
-            graph_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/bc_official',
+# europe_data(out_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/freight_data',
+#             graph_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/bc_official',
+#             nuts_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/nuts_borders/nuts_borders",
+#             europe_data_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/freight/gqgv/GQGV_2014/GQGV_2014_Mikrodaten.csv")
+europe_data(network_path=r'C:/Users/Ion/IVT/OSM_python/test/ch1234',
             nuts_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/nuts_borders/nuts_borders",
             europe_data_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/freight/gqgv/GQGV_2014/GQGV_2014_Mikrodaten.csv")
 
@@ -123,4 +136,4 @@ europe_data(out_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/freight_data',
 #
 
 
-print(datetime.datetime.now(), 'Main script ends')
+print(datetime.datetime.now(), 'Main script ends.')

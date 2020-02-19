@@ -20,8 +20,8 @@ def create_shp_largest(G, list_nodes, nodes_dict, splitted_ways_dict, gdf, out_p
     intersected_df = pd.merge(edges_df, all_edges, how='inner')
 
     intersected_df['geometry'] = intersected_df.apply(lambda row: sw_nodes(row['new_id'],
-                                                                     splitted_ways_dict,
-                                                                     nodes_dict), axis=1)
+                                                                           splitted_ways_dict,
+                                                                           nodes_dict), axis=1)
     intersected_gdf = gpd.GeoDataFrame(intersected_df)
     # intersected_gdf['start_node_id', 'end_node_id', 'new_id','geometry'].to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
     intersected_gdf['geometry'].to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
@@ -112,21 +112,21 @@ def create_graph_func(out_path, gdf, nodes_dict, splitted_ways_dict):
         print('------------------------------------------------------------------------')
 
     # create shapefile with all nodes/edges excluded from the final graph (only for visual purpose)
-    if os.path.isfile(str(out_path) + "/eu_isolated_graph_bytime.gpickle") is False and \
-            len(longest_networks) > 1:
-        print(datetime.datetime.now(), 'Creating shpfile with graphs isolatated nodes ...')
-
-        # create shp file of isolated networks from original graph
-        create_shp_largest(G, isolated, nodes_dict, splitted_ways_dict, gdf, out_path, 'isolated_graph')
-
-        # export GRAPH to file
-        nx.write_gpickle(G_isolated, str(out_path) + "/eu_isolated_graph_bytime.gpickle")
-
-        # print(datetime.datetime.now(), 'Isolated ways: ' + str(len(intersected_df)))
-        print('------------------------------------------------------------------------')
-    else:
-        print(datetime.datetime.now(), 'Network does not have isolated nodes or shapefile of them already exists in out_path ')
-        print('------------------------------------------------------------------------')
+    # if os.path.isfile(str(out_path) + "/eu_isolated_graph_bytime.gpickle") is False and \
+    #         len(longest_networks) > 1:
+    #     print(datetime.datetime.now(), 'Creating shpfile with graphs isolatated nodes ...')
+    #
+    #     # create shp file of isolated networks from original graph
+    #     create_shp_largest(G, isolated, nodes_dict, splitted_ways_dict, gdf, out_path, 'isolated_graph')
+    #
+    #     # export GRAPH to file
+    #     nx.write_gpickle(G_isolated, str(out_path) + "/eu_isolated_graph_bytime.gpickle")
+    #
+    #     # print(datetime.datetime.now(), 'Isolated ways: ' + str(len(intersected_df)))
+    #     print('------------------------------------------------------------------------')
+    # else:
+    #     print(datetime.datetime.now(), 'Network does not have isolated nodes or shapefile of them already exists in out_path ')
+    #     print('------------------------------------------------------------------------')
 
 # #Create the tree of nodes composing the node
 # #do we supose that nearest neighbours can only be "start" or "end" points of each way? or nodes in between can be as well?

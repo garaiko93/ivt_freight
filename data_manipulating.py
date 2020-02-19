@@ -98,6 +98,7 @@ from progressbar import Percentage, ProgressBar, Bar, ETA
 def europe_data(network_path, nuts_path, europe_data_path):
     print(datetime.datetime.now(), 'Europe data manipulating begins ...')
     out_path = str(network_path) + '/freight_data'
+    network_files = str(network_path) + '/network_files'
     graph_path = str(network_path) + '/bc_official/eu_network_graph_with_official_bc.gpickle'
 
     if not os.path.exists(str(out_path)):
@@ -162,7 +163,7 @@ def europe_data(network_path, nuts_path, europe_data_path):
               + str(G.number_of_nodes()) + '/' + str(G.number_of_edges()) + ' (Nnodes/Nedges)')
 
         # # IMPORT nodes_europe
-        file = open(str(out_path) + "/europe_nodes_dict2056.pkl", 'rb')
+        file = open(str(network_files) + "/europe_nodes_dict2056.pkl", 'rb')
         nodes_europe_2056 = pickle.load(file)
         file.close()
         print(datetime.datetime.now(), 'Nnodes in nodes_europe_2056: ' + str(len(nodes_europe_2056)))
@@ -182,6 +183,7 @@ def europe_data(network_path, nuts_path, europe_data_path):
                     i += 1
                     node_sel = G_nodes[i]
         print(datetime.datetime.now(), 'KDTree has: ' + str(len(G_lonlat)) + ' nodes.')
+        print('------------------------------------------------------------------------')
 
         nuts_europe = {}
         tree = spatial.KDTree(G_lonlat)
@@ -207,12 +209,14 @@ def europe_data(network_path, nuts_path, europe_data_path):
             pickle.dump(nuts_europe, f, pickle.HIGHEST_PROTOCOL)
 
         print(datetime.datetime.now(), len(nuts_europe))
+        print('------------------------------------------------------------------------')
     else:
         # CHECKPOINT: load nuts dictionary
         file = open(str(out_path) + '/nuts_europe_dict.pkl', 'rb')
         nuts_europe = pickle.load(file)
         file.close()
-        print('Nnuts in nuts_europe: ' + str(len(nuts_europe)))
+        print(datetime.datetime.now(), 'Nnuts in nuts_europe: ' + str(len(nuts_europe)))
+        print('------------------------------------------------------------------------')
 
     # load europe OD matrix ('GQGV_2014_Mikrodaten.csv' file)
     od_europe_df = pd.read_csv(str(europe_data_path), sep=",")
@@ -240,7 +244,7 @@ def europe_data(network_path, nuts_path, europe_data_path):
             if destination not in missing_nuts:
                 missing_nuts.append(destination)
 
-        print(rowname, end="\r")
+        print(datetime.datetime.now(), rowname, end="\r")
         return pd.Series([o_node_id, d_node_id])
 
     od_europesum_df[['o_node_id', 'd_node_id']] = od_europesum_df.apply(
@@ -251,6 +255,9 @@ def europe_data(network_path, nuts_path, europe_data_path):
 
     od_europesum_df = pd.DataFrame.dropna(od_europesum_df)  # in case there are missing nuts not defined in the dictionary
     od_europesum_df.to_csv(str(out_path) + "/od_europesum_df.csv", sep=",", index=None)
+
+    print(datetime.datetime.now(), 'Process of manipulating europa data finished')
+    print('------------------------------------------------------------------------')
 
     # Last filter for 2_routing
     if os.path.isfile(str(out_path) + "/od_incorrect_DABC.csv") == True:
@@ -267,8 +274,10 @@ def europe_data(network_path, nuts_path, europe_data_path):
             if oid in list(od_incorrect_DABC['OID']):
                 droprows.append(i)
         od_europesum_df=od_europesum_df.drop(od_europesum_df.index[droprows])
-        print(len(od_europesum_df))
         od_europesum_df.to_csv(str(out_path) + "/od_europesum_df.csv", sep = ",", index = None, encoding='latin1')
+
+        print(len(od_europesum_df))
+        print('------------------------------------------------------------------------')
 
 
 

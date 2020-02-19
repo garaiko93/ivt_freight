@@ -39,7 +39,6 @@ CHECK:
 
 
 def find_bc(network_path, border_file, bc_path):
-
     print(datetime.datetime.now(), 'Border crossing search begins ...')
     # -----------------------------------------------------------------------------
     # DEFINE OUT_PATH AND LOAD FILES
@@ -51,6 +50,8 @@ def find_bc(network_path, border_file, bc_path):
     # bc_path = 'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv'
 
     out_path = str(network_path) + '/bc_official'
+    network_files = str(network_path) + '/network_files'
+
     if not os.path.exists(str(out_path)):
         os.makedirs(str(out_path))
         print(datetime.datetime.now(), 'Directory created')
@@ -59,12 +60,13 @@ def find_bc(network_path, border_file, bc_path):
 
     # import shp files with network and CH border
     ch_border = gpd.read_file(border_file)
-    europe_network = gpd.read_file(str(network_path) + '/gdf_MTP_europe.shp')
+    europe_network = gpd.read_file(str(network_files) + '/gdf_MTP_europe.shp')
     official_df = pd.read_csv(bc_path)
 
     print(datetime.datetime.now(), 'Nlines in ch_border: ' + str(len(ch_border)))
     print(datetime.datetime.now(), 'Nways in europe_network: ' + str(len(europe_network)))
     print(datetime.datetime.now(), 'Nbc in official_df: ' + str(len(official_df)))
+    print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
     # FIND WAYS THAT INTERSECT CH BORDER
@@ -79,7 +81,7 @@ def find_bc(network_path, border_file, bc_path):
         pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ', Percentage(), ' ', ETA()],
                            maxval=len(europe_network))
         # loops over all the ways defined in the network and keeps the coordinates and the new_id of the way crossing the ring
-        print(datetime.datetime.now(), 'Searching ways that intersect the Swiss border ...')
+        print(datetime.datetime.now(), 'Searching ways from the network that intersect the Swiss border ...')
         for i in pbar(range(0, len(europe_network))):
             ls = europe_network.iloc[i]['geometry']
             point = ring.intersection(ls)
@@ -101,9 +103,12 @@ def find_bc(network_path, border_file, bc_path):
 
         ch_bc = gpd.GeoDataFrame(crossing_points_df)
         ch_bc.to_file(str(out_path) + "/crossing_onlypoints.shp")
+        print('------------------------------------------------------------------------')
     else:
         # CHECKPOINT: load file created before
         ch_bc = gpd.read_file(str(out_path) + "/crossing_onlypoints.shp")
+        print(datetime.datetime.now(), 'Border crossings already found, loaded: ' + str(len(ch_bc)))
+        print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
     # FILTER OFFICIAL_DF WITH FREIGHT BORDER CROSSINGS
@@ -133,7 +138,7 @@ def find_bc(network_path, border_file, bc_path):
     official_df = official_df.drop(official_df.index[droprows])
     print(datetime.datetime.now(), 'Remaining border crossings in official_df after applying filter of minimum value(' +
           str(min_freight) + '): ' + str(len(official_df)))
-    official_df.head()
+    print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
     # DEFINE COORDINATES OF OFFICIAL BORDER CROSSINGS (MANUALLY)
@@ -311,7 +316,7 @@ def find_bc(network_path, border_file, bc_path):
     crossings = pd.merge(official_df, crossings[['Nr.','geometry','country','group','found_bc']], how='inner', on='Nr.')
     # this are merged to get all the freight data for each geometry point
     print(datetime.datetime.now(), len(crossings))
-    crossings.head()
+    print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
     # FIND CLOSEST NETWORK BORDER CROSSING
@@ -358,7 +363,7 @@ def find_bc(network_path, border_file, bc_path):
     gdf[['Nr.', 'Name', 'geometry']].to_file(str(out_path) + "/crossings_unofficial.shp")
 
     print(datetime.datetime.now(), 'Crossing points in crossings dataframe: ' + str(len(crossings)))
-    crossings.head()
+    print('------------------------------------------------------------------------')
 
     # For an easier later comparison, a dictionary is created containing data of the border crossings, this will be loaded in the routing code
     wayid_by_cp = {}
@@ -385,6 +390,7 @@ def find_bc(network_path, border_file, bc_path):
     with open(str(out_path) + '/wayidbycp_dict' + '.pkl', 'wb') as f:
         pickle.dump(wayid_by_cp, f, pickle.HIGHEST_PROTOCOL)
     print(datetime.datetime.now(),  'New_ids in wayid_by_cp: ' + str(len(wayid_by_cp)))
+    print('------------------------------------------------------------------------')
 
     # dataframe bc_df contains all the information of the final border crossings with all the matches from the network
     bc_df = pd.DataFrame.from_records(coord_list, columns=[
@@ -398,18 +404,18 @@ def find_bc(network_path, border_file, bc_path):
 
     print(datetime.datetime.now(), 'Border crossings in bc_df: ' + str(len(bc_df)))
     print(datetime.datetime.now(), 'New_ids repeated in rep_ids: ' + str(len(rep_ids)))
-    gdf.head()
+    print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
     # MODIFY GRAPH, REMOVE EDGES THAT ARE NOT IN ELECTED CROSSING POINTS
     # -----------------------------------------------------------------------------
     # IMPORT G original graph
     # (not the one with the largest island as this procedure may change this largest island so the largest network will be taken later from this output)
-    G = nx.read_gpickle(str(network_path) + "/eu_network_graph_bytime.gpickle")
+    G = nx.read_gpickle(str(network_files) + "/eu_network_graph_bytime.gpickle")
     print(datetime.datetime.now(), 'G graph (Nnodes/Nedges): '+ str(G.number_of_nodes()) + '/' + str(G.number_of_edges()))
 
     # # IMPORT nodes_europe
-    file = open(str(network_path) + "/europe_ways_splitted_dict.pkl",'rb')
+    file = open(str(network_files) + "/europe_ways_splitted_dict.pkl",'rb')
     europe_ways_splitted_dict = pickle.load(file)
     file.close()
     print(datetime.datetime.now(), 'Nways in europe_ways_splitted_dict: ' + str(len(europe_ways_splitted_dict)))
@@ -453,7 +459,9 @@ def find_bc(network_path, border_file, bc_path):
         G.number_of_nodes()) + ' nodes')
     print(datetime.datetime.now(), 'From ' + str(len(none_elected)) + ' none_elected Edges: ' + str(
         deleted_edges) + ' deleted correctly (others not in graph)')
+    print('------------------------------------------------------------------------')
     print(datetime.datetime.now(), 'New graph exported as "eu_network_graph_with_official_bc"')
+    print('------------------------------------------------------------------------')
 
 
 #CHECK WHICH elected crossings ARE NOT IN THE GRAPH (it could be because of islands)
