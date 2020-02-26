@@ -103,9 +103,9 @@ def europe_data(network_path, nuts_path, europe_data_path):
 
     if not os.path.exists(str(out_path)):
         os.makedirs(str(out_path))
-        print(datetime.datetime.now(), 'Directory created')
+        print(datetime.datetime.now(), 'Directory created.')
     else:
-        print(datetime.datetime.now(), 'Directory exists, change name of attempt output directory')
+        print(datetime.datetime.now(), 'Directory exists.')
 
     if os.path.isfile(str(out_path) + '/nuts_europe_dict.pkl') == False:
         # load shape files of NUTS for each year
@@ -268,8 +268,8 @@ def europe_data(network_path, nuts_path, europe_data_path):
         # DROP ROWS FROM incorrect dataframe from 1_ROUTING
         droprows = []
         print(len(od_europesum_df))
-        for i in range(0,len(od_europesum_df)):
-            print (i, end="\r")
+        for i in range(len(od_europesum_df)):
+            print(i, end="\r")
             oid = od_europesum_df.iloc[i]['OID']
             if oid in list(od_incorrect_DABC['OID']):
                 droprows.append(i)

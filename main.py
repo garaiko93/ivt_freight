@@ -9,6 +9,7 @@ from network_parser import parse_network
 from merge_networks import merge_networks_funct
 from bc_official import find_bc
 from data_manipulating import europe_data
+from routing import rounting_funct
 
 
 print(datetime.datetime.now(), 'Main script begins')
@@ -47,7 +48,6 @@ print(datetime.datetime.now(), 'Main script begins')
 # 3. --shp_file (optional): Directory of shp file which defines area of new scenario
 # (i.e.: "C:/Users/.../bci_polygon30k_4326.shp'")
 # '''
-
 #         1: 'motorway',
 #         2: 'trunk',
 #         3: 'primary',
@@ -65,8 +65,13 @@ print(datetime.datetime.now(), 'Main script begins')
 #               highway_types=4,
 #               shp_file=None,
 #               export_files=True)
-# parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/switzerland-latest.osm.bz2',
-#               out_path=r'C:/Users/Ion/IVT/OSM_python/test/ch4/network_files',
+# parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2',
+#               out_path=r'C:/Users/Ion/IVT/OSM_python/test/lie123',
+#               highway_types=123,
+#               shp_file=None,
+#               export_files=True)
+# parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2',
+#               out_path=r'C:/Users/Ion/IVT/OSM_python/test/lie4',
 #               highway_types=4,
 #               shp_file=None,
 #               export_files=True)
@@ -91,9 +96,9 @@ print(datetime.datetime.now(), 'Main script begins')
 #                      secondary_path='/cluster/home/gaion/freight/networks/eu123/network_files',
 #                      out_path='/cluster/home/gaion/freight/networks/eu123ch4/network_files')
 
-# merge_networks_funct(original_path=r'C:/Users/Ion/IVT/OSM_python/test/ch1/network_files',
-#                      secondary_path=r'C:/Users/Ion/IVT/OSM_python/test/ch2/network_files',
-#                      out_path=r'C:/Users/Ion/IVT/OSM_python/test/ch12/network_files')
+# merge_networks_funct(original_path=r'C:/Users/Ion/IVT/OSM_python/test/lie123',
+#                      secondary_path=r'C:/Users/Ion/IVT/OSM_python/test/lie4',
+#                      out_path=r'C:/Users/Ion/IVT/OSM_python/test/lie1234')
 
 # -------------------------------------------------------------------------------------------------------------
 # FIND SWISS BORDER CROSSINGS WITH THE NETWORK
@@ -102,9 +107,9 @@ print(datetime.datetime.now(), 'Main script begins')
 # find_bc(network_path='/cluster/home/gaion/freight/networks/eu123ch4/network_files',
 #         border_file='/cluster/home/gaion/freight/data/bci_path.shp',
 #         bc_path='/cluster/home/gaion/freight/data/official_counting_ot.csv')
-find_bc(network_path=r'C:/Users/Ion/IVT/OSM_python/test/ch1234',
-        border_file=r'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp',
-        bc_path=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv')
+# find_bc(network_path=r'C:/Users/Ion/IVT/OSM_python/test/lie1234',
+#         border_file=r'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp',
+#         bc_path=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv')
 
 # -------------------------------------------------------------------------------------------------------------
 # MANIPULATE FREIGHT DATA FOR ROUTING
@@ -118,17 +123,22 @@ find_bc(network_path=r'C:/Users/Ion/IVT/OSM_python/test/ch1234',
 #             graph_path=r'C:/Users/Ion/IVT/OSM_python/test/eu123ch4/bc_official',
 #             nuts_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/nuts_borders/nuts_borders",
 #             europe_data_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/freight/gqgv/GQGV_2014/GQGV_2014_Mikrodaten.csv")
-europe_data(network_path=r'C:/Users/Ion/IVT/OSM_python/test/ch1234',
-            nuts_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/nuts_borders/nuts_borders",
-            europe_data_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/freight/gqgv/GQGV_2014/GQGV_2014_Mikrodaten.csv")
+# europe_data(network_path=r'C:/Users/Ion/IVT/OSM_python/test/lie1234',
+#             nuts_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/nuts_borders/nuts_borders",
+#             europe_data_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/freight/gqgv/GQGV_2014/GQGV_2014_Mikrodaten.csv")
 
 # -------------------------------------------------------------------------------------------------------------
 # ROUTING
 # -------------------------------------------------------------------------------------------------------------
-# routing(network_path, border_file, bc_data)
+# def rounting_funct(network_path, border_file, official_count_file, training=False):
+
 # rounting('/cluster/home/gaion/freight/networks/ch123/network_files',
 #         '/cluster/home/gaion/freight/data/bci_path.shp',
 #         '/cluster/home/gaion/freight/networks/chlie123/network_files')
+rounting_funct(network_path=r'C:/Users/Ion/IVT/OSM_python/test/lie1234',
+               border_file=r'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp',
+               official_count_file=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting.csv',
+               training=True)
 
 # -------------------------------------------------------------------------------------------------------------
 # ANALYSE RESULTS OF ROUTING

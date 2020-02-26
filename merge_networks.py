@@ -12,6 +12,9 @@ def merge_networks_funct(original_path, secondary_path, out_path):
 # original_path = r'C:/Users/Ion/IVT/OSM_python/test/lie/MTP'
 # secondary_path = r'C:/Users/Ion/IVT/OSM_python/test/lie/S'
 # out_path = r'C:/Users/Ion/IVT/OSM_python/test/lie/merged/network'
+    out_path = str(out_path) + '/network_files'
+    original_path = str(original_path) + '/network_files'
+    secondary_path = str(secondary_path) + '/network_files'
 
     if not os.path.exists(str(out_path)):
         os.makedirs(str(out_path))
@@ -22,7 +25,7 @@ def merge_networks_funct(original_path, secondary_path, out_path):
 # MERGE NODES
 # -----------------------------------------------------------------------------
     def merge_nodes(epsg, original_path, secondary_path, out_path):
-        print(datetime.datetime.now(), 'Merging nodes of epsg:' + str(epsg))
+        print(datetime.datetime.now(), 'Merging nodes of epsg:' + str(epsg) + ' ...')
 
         # IMPORT nodes_europe
         file = open(str(original_path) + "/europe_nodes_dict" + str(epsg) +".pkl", 'rb')
@@ -59,7 +62,7 @@ def merge_networks_funct(original_path, secondary_path, out_path):
 # MERGE WAYS
 # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/europe_ways_splitted_dict.pkl") == False:
-        print(datetime.datetime.now(), 'Merging splitted ways dictionaries')
+        print(datetime.datetime.now(), 'Merging splitted ways dictionaries ...')
         #IMPORT splitted_ways_dict
         file = open(str(original_path) + "/europe_ways_splitted_dict.pkl",'rb')
         splitted_ways_dict = pickle.load(file)
@@ -98,7 +101,7 @@ def merge_networks_funct(original_path, secondary_path, out_path):
 # MERGE WAYS CSV
 # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/gdf_MTP_europe.csv") == False:
-        print(datetime.datetime.now(), 'Merging ways.csv')
+        print(datetime.datetime.now(), 'Merging ways.csv ...')
         # IMPORT gdf_MTP_europe.csv
         europe_ways_df = pd.read_csv(str(original_path) + "/gdf_MTP_europe.csv", low_memory=False)
         print(datetime.datetime.now(), 'Nways in europe_ways_df : ' + str(len(europe_ways_df)))
@@ -112,11 +115,12 @@ def merge_networks_funct(original_path, secondary_path, out_path):
     else:
         print(datetime.datetime.now(), 'Ways CSV was already merged before.')
         print('------------------------------------------------------------------------')
+
 # -----------------------------------------------------------------------------
 # MERGE WAYS SHP
 # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/gdf_MTP_europe.shp") == False:
-        print(datetime.datetime.now(), 'Merging ways shp file')
+        print(datetime.datetime.now(), 'Merging ways shp file ...')
         # IMPORT europe_ways_gdf
         europe_ways_gdf = gpd.read_file(str(original_path) + "/gdf_MTP_europe.shp")
         print(datetime.datetime.now(), 'Nways in europe_ways_gdf: ' + str(len(europe_ways_gdf)))
@@ -133,13 +137,11 @@ def merge_networks_funct(original_path, secondary_path, out_path):
         print('------------------------------------------------------------------------')
 
 
-
-
 # -----------------------------------------------------------------------------
 # MERGE GRAPHS
 # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") == False:
-        print(datetime.datetime.now(), 'Merging graph')
+        print(datetime.datetime.now(), 'Merging graph ...')
         # load data
         file = open(str(out_path) + "/europe_nodes_dict2056.pkl", 'rb')
         nodes_dict2056 = pickle.load(file)

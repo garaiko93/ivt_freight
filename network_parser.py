@@ -89,7 +89,7 @@ def parse_network(raw_file, out_path, highway_types = 123, shp_file=None, export
     # raw_file = 'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2'
     # out_path = 'C:/Users/Ion/IVT/OSM_python/test/lie'
     # shp_path = 'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp'
-    # out_path = str(out_path) + '/network_files'
+    out_path = str(out_path) + '/network_files'
     if not os.path.exists(str(out_path)):
         os.makedirs(str(out_path))
         print(datetime.datetime.now(), 'Directory created')
@@ -127,9 +127,9 @@ def parse_network(raw_file, out_path, highway_types = 123, shp_file=None, export
         lines_relations = 0
         lines_europe = 0
         with bz2file.open(str(raw_file)) as f:
-            with bz2file.open(str(out_path) + "/europe-latest_nodes.osm.bz2", 'wb') as f1:
-                with bz2file.open(str(out_path) + "/europe-latest_ways.osm.bz2", 'wb') as f2:
-                    with bz2file.open(str(out_path) + "/europe-latest_relations.osm.bz2", 'wb') as f3:
+            with bz2file.open(str(rawfile_path) + "/" + str(rawfile_name) + "-latest_nodes.osm.bz2", 'wb') as f1:
+                with bz2file.open(str(rawfile_path) + "/" + str(rawfile_name) + "-latest_ways.osm.bz2", 'wb') as f2:
+                    with bz2file.open(str(rawfile_path) + "/" + str(rawfile_name) + "-latest_relations.osm.bz2", 'wb') as f3:
                         for line in f:
                             # bar.update(line)
                             lines_europe += 1
@@ -176,7 +176,7 @@ def parse_network(raw_file, out_path, highway_types = 123, shp_file=None, export
     # WAYS
     # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/europe_ways_dict.pkl") == False:
-        print(datetime.datetime.now(), 'Parsing ' + str(filter_highways) + ' ways from OSM xml file ...')
+        print(datetime.datetime.now(), 'Parsing ' + str(filter_highways) + ' ways from ' + str(rawfile_name) + ' OSM xml file ...')
         ways = []
         way_check = 0
         ways_count = 0
