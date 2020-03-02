@@ -82,7 +82,7 @@ def find_bc(network_path, border_file, bc_path):
                            maxval=len(europe_network))
         # loops over all the ways defined in the network and keeps the coordinates and the new_id of the way crossing the ring
         print(datetime.datetime.now(), 'Searching ways from the network that intersect the Swiss border ...')
-        for i in pbar(range(0, len(europe_network))):
+        for i in pbar(range(len(europe_network))):
             ls = europe_network.iloc[i]['geometry']
             point = ring.intersection(ls)
             if point.bounds != ():
@@ -301,7 +301,7 @@ def find_bc(network_path, border_file, bc_path):
     crossings.head()
 
     # convert coordinates to 2056 coordinate system
-    def geolocate(x,y):
+    def geolocate(x, y):
         #change coordinates system
         point4326 = Point(x, y)
         project = partial(
@@ -312,8 +312,10 @@ def find_bc(network_path, border_file, bc_path):
         return pd.Series([point2056])
         # return point2056
 
-    crossings[['geometry']] = crossings.apply(lambda row: geolocate(row['lon'],row['lat']),axis=1)
-    crossings = pd.merge(official_df, crossings[['Nr.','geometry','country','group','found_bc']], how='inner', on='Nr.')
+    crossings[['geometry']] = crossings.apply(lambda row: geolocate(row['lon'], row['lat']),axis=1)
+    crossings = pd.merge(official_df, crossings[['Nr.', 'geometry', 'country', 'group', 'found_bc']],
+                         how='inner', on='Nr.')
+
     # this are merged to get all the freight data for each geometry point
     print(datetime.datetime.now(), len(crossings))
     print('------------------------------------------------------------------------')
@@ -369,7 +371,7 @@ def find_bc(network_path, border_file, bc_path):
     wayid_by_cp = {}
     coord_list = []
     rep_ids = []
-    for i in range(0, len(crossings)):
+    for i in range(len(crossings)):
         name = crossings.iloc[i]['Name']
         station_id = crossings.iloc[i]['Nr.']
         new_ids = crossings.iloc[i]['new_ids']
