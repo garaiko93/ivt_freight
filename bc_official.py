@@ -38,7 +38,7 @@ CHECK:
 # thresholds: freight_min_value, bc_radius
 
 
-def find_bc(network_path, border_file, bc_path):
+def find_bc(network_objects, network_path, border_file, bc_path):
     print(datetime.datetime.now(), 'Border crossing search begins ...')
     # -----------------------------------------------------------------------------
     # DEFINE OUT_PATH AND LOAD FILES
@@ -48,19 +48,26 @@ def find_bc(network_path, border_file, bc_path):
 
     # border_file = 'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp'
     # bc_path = 'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv'
+    if network_path:
+        out_path = str(network_path) + '/bc_official'
+        network_files = str(network_path) + '/network_files'
 
-    out_path = str(network_path) + '/bc_official'
-    network_files = str(network_path) + '/network_files'
+        if not os.path.exists(str(out_path)):
+            os.makedirs(str(out_path))
+            print(datetime.datetime.now(), 'Directory created')
+        else:
+            print(datetime.datetime.now(), 'Directory exists')
 
-    if not os.path.exists(str(out_path)):
-        os.makedirs(str(out_path))
-        print(datetime.datetime.now(), 'Directory created')
+        # import shp files with network and CH border
+        europe_network = gpd.read_file(str(network_files) + '/gdf_MTP_europe.shp')
     else:
-        print(datetime.datetime.now(), 'Directory exists')
+        out_path = None
+        europe_network = network_objects[1]
 
-    # import shp files with network and CH border
     ch_border = gpd.read_file(border_file)
-    europe_network = gpd.read_file(str(network_files) + '/gdf_MTP_europe.shp')
+    # ch_border.crs = "epsg:2056"
+    # ch_border = ch_border.to_crs("epsg:4326")
+    print(ch_border.crs)
     official_df = pd.read_csv(bc_path)
 
     print(datetime.datetime.now(), 'Nlines in ch_border: ' + str(len(ch_border)))
@@ -71,7 +78,7 @@ def find_bc(network_path, border_file, bc_path):
     # -----------------------------------------------------------------------------
     # FIND WAYS THAT INTERSECT CH BORDER
     # -----------------------------------------------------------------------------
-    if os.path.isfile(str(out_path) + "/crossing_onlypoints.shp") is False:
+    if os.path.isfile(str(out_path) + "/crossing_onlypoints.shp") is False or out_path is None:
         # define the line that defines the swiss border:
         # ring = LineString(list(ch_border.exterior[0].coords))
         # ring = ch_border['geometry'][0].exterior
@@ -97,12 +104,14 @@ def find_bc(network_path, border_file, bc_path):
         print(datetime.datetime.now(), 'Process iterated over ' + str(len(europe_network)) + ' ways.')
         print(datetime.datetime.now(), 'Number of border crossings found in the network: ' + str(len(points_list)))
 
-        #EXPORT found points TO FILES (csv and shp)
-        crossing_points_df = pd.DataFrame.from_records(points_list, columns=["geometry", "new_id"])
-        crossing_points_df.to_csv(str(out_path) + "/crossing_onlypoints.csv", sep=",", index=None)
 
+        crossing_points_df = pd.DataFrame.from_records(points_list, columns=["geometry", "new_id"])
         ch_bc = gpd.GeoDataFrame(crossing_points_df)
-        ch_bc.to_file(str(out_path) + "/crossing_onlypoints.shp")
+
+        # EXPORT found points TO FILES (csv and shp)
+        if out_path is not None:
+            crossing_points_df.to_csv(str(out_path) + "/crossing_onlypoints.csv", sep=",", index=None)
+            ch_bc.to_file(str(out_path) + "/crossing_onlypoints.shp")
         print('------------------------------------------------------------------------')
     else:
         # CHECKPOINT: load file created before
@@ -298,7 +307,6 @@ def find_bc(network_path, border_file, bc_path):
 
     add_bc_lonlat()
     print(datetime.datetime.now(), 'Number of crossings in df: ' + str(len(crossings)))
-    crossings.head()
 
     # convert coordinates to 2056 coordinate system
     def geolocate(x, y):
@@ -325,145 +333,168 @@ def find_bc(network_path, border_file, bc_path):
     # -----------------------------------------------------------------------------
     # Match the closest border crossings found in the network in a radius of 6 km from each of the crossings of the original data
     # Starting by creating a tree with the coordinates of all border crossings found with the official data NAMES in the previous
-    G_lonlat = []
-    for i in range(0, len(ch_bc)):
-        G_lonlat.append((ch_bc.iloc[i]['geometry'].x,
-                         ch_bc.iloc[i]['geometry'].y))
-    tree = spatial.KDTree(G_lonlat)
-    # droprows = []
+    if os.path.isfile(str(out_path) + "/bc_df.shp") is False or out_path is None:
+        G_lonlat = []
+        for i in range(len(ch_bc)):
+            G_lonlat.append((ch_bc.iloc[i]['geometry'].x,
+                             ch_bc.iloc[i]['geometry'].y))
+        tree = spatial.KDTree(G_lonlat)
+        # droprows = []
 
-    def closest_bc(bc):
-    # For each official border crossing defined in the step before the closest neighbour is found (later filtered if they are above 6km distance)
-    # The important output of this function is the new_ids of the ways that are matched to the official border crossings (stored later as wayid_by_cp), so it can be checked on the routing
-        new_ids = []
-        cp = []
-        point1 = (bc.x, bc.y)
-        nn = tree.query(point1)
-        coord = G_lonlat[nn[1]]
-        distance = Point(point1).distance(Point(coord))
-        for j in range(0, len(ch_bc)):
-            point2 = ch_bc.iloc[j]['geometry']
-            new_id = ch_bc.iloc[j]['new_id']
-            # Last, for each closest crossing in the network, a grouping of the crossings in a radius of 500 m is done,
-            # so also different lines of the same way are matched with the same border crossing
-            if Point(coord).distance(point2) < 100:
-                new_ids.append(new_id)
-                cp.append((point2.x, point2.y))
-        return pd.Series([coord, distance, new_ids, cp])
+        def closest_bc(bc):
+        # For each official border crossing defined in the step before the closest neighbour is found (later filtered if they are above 6km distance)
+        # The important output of this function is the new_ids of the ways that are matched to the official border crossings (stored later as wayid_by_cp), so it can be checked on the routing
+            new_ids = []
+            cp = []
+            point1 = (bc.x, bc.y)
+            nn = tree.query(point1)
+            coord = G_lonlat[nn[1]]
+            distance = Point(point1).distance(Point(coord))
+            for j in range(0, len(ch_bc)):
+                point2 = ch_bc.iloc[j]['geometry']
+                new_id = ch_bc.iloc[j]['new_id']
+                # Last, for each closest crossing in the network, a grouping of the crossings in a radius of 500 m is done,
+                # so also different lines of the same way are matched with the same border crossing
+                if Point(coord).distance(point2) < 100:
+                    new_ids.append(new_id)
+                    cp.append((point2.x, point2.y))
+            return pd.Series([coord, distance, new_ids, cp])
 
-    crossings[['closest_bc', 'distance(m)', 'new_ids', 'cp_coords']] = crossings.apply(
-        lambda row: closest_bc(row['geometry']), axis=1)
-    crossings = crossings.sort_values('distance(m)', ascending=False)
-    # crossings = crossings[crossings['distance(m)']<6000] #filter of 6k
-    # crossings = crossings[crossings['found_bc']== 1] #filter of found bc
-    # crossings = crossings.sort_values('group', ascending=False)
+        crossings[['closest_bc', 'distance(m)', 'new_ids', 'cp_coords']] = crossings.apply(
+            lambda row: closest_bc(row['geometry']), axis=1)
+        crossings = crossings.sort_values('distance(m)', ascending=False)
+        # crossings = crossings[crossings['distance(m)']<6000] #filter of 6k
+        # crossings = crossings[crossings['found_bc']== 1] #filter of found bc
+        # crossings = crossings.sort_values('group', ascending=False)
 
-    # export crossings info to a csv and shp file
-    crossings.to_csv(str(out_path) + "/crossings_unofficial.csv", sep=",", index=None,
-                     encoding='latin1')
-    gdf = gpd.GeoDataFrame(crossings)
-    gdf[['Nr.', 'Name', 'geometry']].to_file(str(out_path) + "/crossings_unofficial.shp")
+        # export crossings info to a csv and shp file
+        gdf = gpd.GeoDataFrame(crossings)
+        if out_path is not None:
+            crossings.to_csv(str(out_path) + "/crossings_unofficial.csv", sep=",", index=None,
+                             encoding='latin1')
+            gdf[['Nr.', 'Name', 'geometry']].to_file(str(out_path) + "/crossings_unofficial.shp")
 
-    print(datetime.datetime.now(), 'Crossing points in crossings dataframe: ' + str(len(crossings)))
-    print('------------------------------------------------------------------------')
+        print(datetime.datetime.now(), 'Crossing points in crossings dataframe: ' + str(len(crossings)))
+        print('------------------------------------------------------------------------')
 
-    # For an easier later comparison, a dictionary is created containing data of the border crossings, this will be loaded in the routing code
-    wayid_by_cp = {}
-    coord_list = []
-    rep_ids = []
-    for i in range(len(crossings)):
-        name = crossings.iloc[i]['Name']
-        station_id = crossings.iloc[i]['Nr.']
-        new_ids = crossings.iloc[i]['new_ids']
-        o_point = crossings.iloc[i]['geometry']
-        coords = crossings.iloc[i]['cp_coords']
-        for id in new_ids:
-            wayid_by_cp[id] = name
-            if id in list(wayid_by_cp):
-                rep_ids.append(id)
-        # this loop stores the info in a list for a later creation of the 'bc_df' DataFrame
-        for coord in coords:
-            j = coords.index(coord)
-            distance = Point(coord).distance(o_point)
-            new_id = crossings.iloc[i]['new_ids'][j]
-            coord_list.append([station_id, name, new_id, distance, Point(coord)])
+        # For an easier later comparison, a dictionary is created containing data of the border crossings, this will be loaded in the routing code
+        wayid_by_cp = {}
+        coord_list = []
+        rep_ids = []
+        for i in range(len(crossings)):
+            name = crossings.iloc[i]['Name']
+            station_id = crossings.iloc[i]['Nr.']
+            new_ids = crossings.iloc[i]['new_ids']
+            o_point = crossings.iloc[i]['geometry']
+            coords = crossings.iloc[i]['cp_coords']
+            for id in new_ids:
+                wayid_by_cp[id] = name
+                if id in list(wayid_by_cp):
+                    rep_ids.append(id)
+            # this loop stores the info in a list for a later creation of the 'bc_df' DataFrame
+            for coord in coords:
+                j = coords.index(coord)
+                distance = Point(coord).distance(o_point)
+                new_id = crossings.iloc[i]['new_ids'][j]
+                coord_list.append([station_id, name, new_id, distance, Point(coord)])
 
-    # EXPORT nuts_centroid_dict TO FILE
-    with open(str(out_path) + '/wayidbycp_dict' + '.pkl', 'wb') as f:
-        pickle.dump(wayid_by_cp, f, pickle.HIGHEST_PROTOCOL)
-    print(datetime.datetime.now(),  'New_ids in wayid_by_cp: ' + str(len(wayid_by_cp)))
-    print('------------------------------------------------------------------------')
+        # EXPORT nuts_centroid_dict TO FILE
+        if out_path is not None:
+            with open(str(out_path) + '/wayidbycp_dict' + '.pkl', 'wb') as f:
+                pickle.dump(wayid_by_cp, f, pickle.HIGHEST_PROTOCOL)
 
-    # dataframe bc_df contains all the information of the final border crossings with all the matches from the network
-    bc_df = pd.DataFrame.from_records(coord_list, columns=[
-        "Nr.", "Name", "new_id", "distance(m)", "geometry"
-    ])
-    bc_df = bc_df.sort_values(by=['distance(m)'], ascending=False)
-    bc_df.to_csv(str(out_path) + "/bc_df.csv", sep=",", index=None, encoding='latin1')
+        print(datetime.datetime.now(),  'New_ids in wayid_by_cp: ' + str(len(wayid_by_cp)))
+        print('------------------------------------------------------------------------')
 
-    gdf = gpd.GeoDataFrame(bc_df)
-    gdf.to_file(str(out_path) + "/bc_df.shp", encoding='latin1')
+        # dataframe bc_df contains all the information of the final border crossings with all the matches from the network
+        bc_df = pd.DataFrame.from_records(coord_list, columns=[
+            "Nr.", "Name", "new_id", "distance(m)", "geometry"
+        ])
+        bc_df = bc_df.sort_values(by=['distance(m)'], ascending=False)
+        gdf = gpd.GeoDataFrame(bc_df)
+        if out_path is not None:
+            bc_df.to_csv(str(out_path) + "/bc_df.csv", sep=",", index=None, encoding='latin1')
+            gdf.to_file(str(out_path) + "/bc_df.shp", encoding='latin1')
 
-    print(datetime.datetime.now(), 'Border crossings in bc_df: ' + str(len(bc_df)))
-    print(datetime.datetime.now(), 'New_ids repeated in rep_ids: ' + str(len(rep_ids)))
-    print('------------------------------------------------------------------------')
+        print(datetime.datetime.now(), 'Border crossings in bc_df: ' + str(len(bc_df)))
+        print(datetime.datetime.now(), 'New_ids repeated in rep_ids: ' + str(len(rep_ids)))
+        print('------------------------------------------------------------------------')
+
+
 
     # -----------------------------------------------------------------------------
     # MODIFY GRAPH, REMOVE EDGES THAT ARE NOT IN ELECTED CROSSING POINTS
     # -----------------------------------------------------------------------------
     # IMPORT G original graph
     # (not the one with the largest island as this procedure may change this largest island so the largest network will be taken later from this output)
-    G = nx.read_gpickle(str(network_files) + "/eu_network_graph_bytime.gpickle")
-    print(datetime.datetime.now(), 'G graph (Nnodes/Nedges): '+ str(G.number_of_nodes()) + '/' + str(G.number_of_edges()))
+    if os.path.isfile(str(out_path) + "/eu_network_graph_with_official_bc.gpickle") is False or out_path is None:
+        if out_path is not None:
+            G = nx.read_gpickle(str(network_files) + "/eu_network_graph_bytime.gpickle")
 
-    # # IMPORT nodes_europe
-    file = open(str(network_files) + "/europe_ways_splitted_dict.pkl",'rb')
-    europe_ways_splitted_dict = pickle.load(file)
-    file.close()
-    print(datetime.datetime.now(), 'Nways in europe_ways_splitted_dict: ' + str(len(europe_ways_splitted_dict)))
+            # # IMPORT europe_ways_splitted_dict
+            file = open(str(network_files) + "/europe_ways_splitted_dict.pkl", 'rb')
+            europe_ways_splitted_dict = pickle.load(file)
+            file.close()
+        else:
+            G = network_objects[0]
+            europe_ways_splitted_dict = network_objects[3]
 
-    # DELETE ways that contain border crossings not considered for the routing
-    all_newids = list(ch_bc.new_id)  # all crossings found in the network
-    elected_newids = list(
-        bc_df.new_id)  # the ones that have passed all the filters and match the official border crossings from the freight data
-    none_elected = [newid for newid in all_newids if newid not in elected_newids]
-    print(datetime.datetime.now(), 'All new_ids: ' + str(len(all_newids)))
-    print(datetime.datetime.now(), 'Elected new_ids: ' + str(len(elected_newids)))
-    print(datetime.datetime.now(), 'Non elected new_ids: ' + str(len(none_elected)))
+        print(datetime.datetime.now(), 'G graph (Nnodes/Nedges): '+ str(G.number_of_nodes()) + '/' + str(G.number_of_edges()))
+        print(datetime.datetime.now(), 'Nways in europe_ways_splitted_dict: ' + str(len(europe_ways_splitted_dict)))
 
-    # remove none_elected edges from graph and export
-    deleted_edges = 0
-    for id in none_elected:
-        o_node = europe_ways_splitted_dict[id][2][0]
-        d_node = europe_ways_splitted_dict[id][2][-1]
-        if (G.has_edge(int(o_node), int(d_node))) == True:
-            G.remove_edge(int(o_node), int(d_node))
-            deleted_edges += 1
+        # DELETE ways that contain border crossings not considered for the routing
+        all_newids = list(ch_bc.new_id)  # all crossings found in the network
+        elected_newids = list(
+            bc_df.new_id)  # the ones that have passed all the filters and match the official border crossings from the freight data
+        none_elected = [newid for newid in all_newids if newid not in elected_newids]
+        print(datetime.datetime.now(), 'All new_ids: ' + str(len(all_newids)))
+        print(datetime.datetime.now(), 'Elected new_ids: ' + str(len(elected_newids)))
+        print(datetime.datetime.now(), 'Non elected new_ids: ' + str(len(none_elected)))
 
-    # Identify the largest component and the "isolated" nodes
-    components = list(nx.connected_components(G))  # list because it returns a generator
-    components.sort(key=len, reverse=True)
-    longest_networks = []
-    for i in range(0, 1):
-        net = components[i]
-        longest_networks.append(len(net))
-    largest = components.pop(0)
-    isolated = set(g for cc in components for g in cc)
-    num_isolated = G.order() - len(largest)
+        # remove none_elected edges from graph and export
+        deleted_edges = 0
+        for id in none_elected:
+            o_node = europe_ways_splitted_dict[id][2][0]
+            d_node = europe_ways_splitted_dict[id][2][-1]
+            if (G.has_edge(int(o_node), int(d_node))) == True:
+                G.remove_edge(int(o_node), int(d_node))
+                deleted_edges += 1
 
-    # remove isolated nodes from G
-    G.remove_nodes_from(isolated)
+        # Identify the largest component and the "isolated" nodes
+        components = list(nx.connected_components(G))  # list because it returns a generator
+        components.sort(key=len, reverse=True)
+        longest_networks = []
+        for i in range(0, 1):
+            net = components[i]
+            longest_networks.append(len(net))
+        largest = components.pop(0)
+        isolated = set(g for cc in components for g in cc)
+        num_isolated = G.order() - len(largest)
 
-    nx.write_gpickle(G, str(out_path) + "/eu_network_graph_with_official_bc.gpickle")
-    print(datetime.datetime.now(), 'G graph (Nnodes/Nedges): ' + str(G.number_of_nodes()) + '/' + str(G.number_of_edges()))
-    print(datetime.datetime.now(), 'New graph has: ' + str(
-        len([len(c) for c in sorted(nx.connected_components(G), key=len, reverse=True)])) + ' island with ' + str(
-        G.number_of_nodes()) + ' nodes')
-    print(datetime.datetime.now(), 'From ' + str(len(none_elected)) + ' none_elected Edges: ' + str(
-        deleted_edges) + ' deleted correctly (others not in graph)')
-    print('------------------------------------------------------------------------')
-    print(datetime.datetime.now(), 'New graph exported as "eu_network_graph_with_official_bc"')
-    print('------------------------------------------------------------------------')
+        # remove isolated nodes from G
+        G.remove_nodes_from(isolated)
+
+        if out_path is not None:
+            nx.write_gpickle(G, str(out_path) + "/eu_network_graph_with_official_bc.gpickle")
+
+        print(datetime.datetime.now(), 'G graph (Nnodes/Nedges): ' + str(G.number_of_nodes()) + '/' + str(G.number_of_edges()))
+        print(datetime.datetime.now(), 'New graph has: ' + str(
+            len([len(c) for c in sorted(nx.connected_components(G), key=len, reverse=True)])) + ' island with ' + str(
+            G.number_of_nodes()) + ' nodes')
+        print(datetime.datetime.now(), 'From ' + str(len(none_elected)) + ' none_elected Edges: ' + str(
+            deleted_edges) + ' deleted correctly (others not in graph)')
+        print('------------------------------------------------------------------------')
+        print(datetime.datetime.now(), 'New graph exported as "eu_network_graph_with_official_bc"')
+        print('------------------------------------------------------------------------')
+
+    if out_path is None:
+        network_objects = [G,
+                           network_objects[1],
+                           network_objects[2],
+                           network_objects[3],
+                           wayid_by_cp,
+                           ]
+        return network_objects
 
 
 #CHECK WHICH elected crossings ARE NOT IN THE GRAPH (it could be because of islands)

@@ -6,7 +6,7 @@ import os
 import datetime
 
 
-def create_shp_largest(G, list_nodes, nodes_dict, splitted_ways_dict, gdf, out_path, filename, export_files):
+def create_shp_largest(G, list_nodes, nodes_dict, splitted_ways_dict, gdf, out_path, filename):
     if len(list_nodes) == 0:
         g_edges = G.edges()
     else:
@@ -21,10 +21,9 @@ def create_shp_largest(G, list_nodes, nodes_dict, splitted_ways_dict, gdf, out_p
     intersected_df['geometry'] = intersected_df.apply(lambda row: sw_nodes(row['new_id'],
                                                                            splitted_ways_dict,
                                                                            nodes_dict), axis=1)
-    if export_files is True:
-        intersected_gdf = gpd.GeoDataFrame(intersected_df)
-        intersected_gdf['start_node_id', 'end_node_id', 'new_id','geometry'].to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
-        intersected_gdf['geometry'].to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
+    intersected_gdf = gpd.GeoDataFrame(intersected_df)
+    # intersected_gdf['start_node_id', 'end_node_id', 'new_id','geometry'].to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
+    intersected_gdf['geometry'].to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
 
     print(datetime.datetime.now(), 'Shp file created successfully with ' + str(len(intersected_df)) + ' ways.')
 
@@ -39,12 +38,7 @@ def sw_nodes(new_id, splitted_ways_dict, nodes_dict):
 
 
 def create_graph_func(out_path, gdf, nodes_dict, splitted_ways_dict):
-    if out_path is None:
-        export_files = False
-    else:
-        export_files = True
-
-    if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
+    if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or out_path is not None:
         print(datetime.datetime.now(), 'Graph creation begins ...')
         # create a graph from network
         G = nx.Graph()
@@ -63,7 +57,7 @@ def create_graph_func(out_path, gdf, nodes_dict, splitted_ways_dict):
         start_Ne = G.number_of_edges()
 
         # export graph of original network to file (without excluding any edge or island)
-        if export_files:
+        if out_path is not None:
             nx.write_gpickle(G, str(out_path) + "/eu_network_graph_bytime.gpickle")
 
         # Identify the largest component and the "isolated" nodes
@@ -87,12 +81,12 @@ def create_graph_func(out_path, gdf, nodes_dict, splitted_ways_dict):
         end_Ne = G.number_of_edges()
 
         # export final graph only containing largest island from the network to file
-        if export_files:
+        if out_path is not None:
             nx.write_gpickle(G, str(out_path) + "/eu_network_largest_graph_bytime.gpickle")
 
-        # Create shp file with final graph
-        print(datetime.datetime.now(), 'Creating shp file of largest network with epsg:2056 ...')
-        create_shp_largest(G, [], nodes_dict, splitted_ways_dict, gdf, out_path, 'eu_network_largest_graph_bytime', export_files)
+            # Create shp file with final graph
+            print(datetime.datetime.now(), 'Creating shp file of largest network with epsg:2056 ...')
+            create_shp_largest(G, [], nodes_dict, splitted_ways_dict, gdf, out_path, 'eu_network_largest_graph_bytime')
 
         print(datetime.datetime.now(), 'Input edges: ' + str(len(edges_list)))
         print(datetime.datetime.now(), 'Start/End N_nodes: ' + str(start_Nn) + '/' + str(end_Nn))
@@ -117,6 +111,7 @@ def create_graph_func(out_path, gdf, nodes_dict, splitted_ways_dict):
         isolated = set(g for cc in components for g in cc)
         print(datetime.datetime.now(), 'Graph with largest network already exists, graph loaded')
         print('------------------------------------------------------------------------')
+
     return G
 
     # create shapefile with all nodes/edges excluded from the final graph (only for visual purpose)

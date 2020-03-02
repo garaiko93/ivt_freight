@@ -30,20 +30,19 @@ def merge_networks_funct(network_objects=None, original_path=None, secondary_pat
 # -----------------------------------------------------------------------------
 # MERGE NODES
 # -----------------------------------------------------------------------------
-    def merge_nodes(epsg, original_path, secondary_path, out_path=None):
+    def merge_nodes(epsg, original_path=None, secondary_path=None, out_path=None, network_objects=None):
         print(datetime.datetime.now(), 'Merging nodes of epsg:' + str(epsg) + ' ...')
-
-        if export_files is False:
+        if out_path is None:
             nodes_europe = network_objects[0][2]
             nodes_chsecondary = network_objects[1][2]
         else:
             # IMPORT nodes_europe
-            file = open(str(original_path) + "/europe_nodes_dict" + str(epsg) +".pkl", 'rb')
+            file = open(str(original_path) + "/europe_nodes_dict" + str(epsg) + ".pkl", 'rb')
             nodes_europe = pickle.load(file)
             file.close()
             print(datetime.datetime.now(), 'Nnodes in nodes_europe epsg' + str(epsg) + ': ' + str(len(nodes_europe)))
 
-            file = open(str(secondary_path) + "/europe_nodes_dict" + str(epsg) +".pkl", 'rb')
+            file = open(str(secondary_path) + "/europe_nodes_dict" + str(epsg) + ".pkl", 'rb')
             nodes_chsecondary = pickle.load(file)
             file.close()
             print(datetime.datetime.now(), 'Nnodes in nodes_chsecondary epsg' + str(epsg) + ': ' + str(len(nodes_chsecondary)))
@@ -66,7 +65,11 @@ def merge_networks_funct(network_objects=None, original_path=None, secondary_pat
     #     print('------------------------------------------------------------------------')
 
     if os.path.isfile(str(out_path) + "/europe_nodes_dict4326.pkl") is False or export_files is False:
-        nodes_dict = merge_nodes('4326', original_path, secondary_path, out_path)
+        nodes_dict = merge_nodes(epsg='4326',
+                                 original_path=original_path,
+                                 secondary_path=secondary_path,
+                                 out_path=out_path,
+                                 network_objects=network_objects)
     else:
         print(datetime.datetime.now(), 'Nodes dictionary with epsg 4326 was already merged before.')
         print('------------------------------------------------------------------------')
@@ -74,9 +77,9 @@ def merge_networks_funct(network_objects=None, original_path=None, secondary_pat
 # -----------------------------------------------------------------------------
 # MERGE WAYS
 # -----------------------------------------------------------------------------
-    if os.path.isfile(str(out_path) + "/europe_ways_splitted_dict.pkl") == False or export_files is False:
+    if os.path.isfile(str(out_path) + "/europe_ways_splitted_dict.pkl") is False or out_path is None:
         print(datetime.datetime.now(), 'Merging splitted ways dictionaries ...')
-        if export_files is False:
+        if out_path is None:
             splitted_ways_dict = network_objects[0][3]
             splitted_secondary_ways_dict = network_objects[1][3]
         else:
@@ -119,9 +122,9 @@ def merge_networks_funct(network_objects=None, original_path=None, secondary_pat
 # -----------------------------------------------------------------------------
 # MERGE WAYS CSV
 # -----------------------------------------------------------------------------
-    if os.path.isfile(str(out_path) + "/gdf_MTP_europe.csv") == False or export_files is False:
+    if os.path.isfile(str(out_path) + "/gdf_MTP_europe.csv") == False or out_path is None:
         print(datetime.datetime.now(), 'Merging ways.csv ...')
-        if export_files is False:
+        if out_path is None:
             europe_ways_df = network_objects[0][1]
             ch_secondary_df = network_objects[1][1]
         else:
@@ -143,31 +146,30 @@ def merge_networks_funct(network_objects=None, original_path=None, secondary_pat
 # -----------------------------------------------------------------------------
 # MERGE WAYS SHP
 # -----------------------------------------------------------------------------
-#     if os.path.isfile(str(out_path) + "/gdf_MTP_europe.shp") == False:
-#         print(datetime.datetime.now(), 'Merging ways shp file ...')
-#         # IMPORT europe_ways_gdf
-#         europe_ways_gdf = gpd.read_file(str(original_path) + "/gdf_MTP_europe.shp")
-#         print(datetime.datetime.now(), 'Nways in europe_ways_gdf: ' + str(len(europe_ways_gdf)))
-#
-#         secondary_ways_gdf = gpd.read_file(str(secondary_path) + "/gdf_MTP_europe.shp")
-#         print(datetime.datetime.now(), 'Nways in secondary_ways_gdf: ' + str(len(secondary_ways_gdf)))
-#
-#         europe_ways_merged_gdf = pd.concat([europe_ways_gdf,secondary_ways_gdf], sort=True)
-#         europe_ways_merged_gdf.to_file(str(out_path) + "/gdf_MTP_europe.shp")
-#         print(datetime.datetime.now(), 'Nways in europe_ways_merged_gdf: ' + str(len(europe_ways_merged_gdf)))
-#         print('------------------------------------------------------------------------')
-#     else:
-#         print(datetime.datetime.now(), 'Ways SHP was already merged before.')
-#         print('------------------------------------------------------------------------')
+    if os.path.isfile(str(out_path) + "/gdf_MTP_europe.shp") == False:
+        print(datetime.datetime.now(), 'Merging ways shp file ...')
+        # IMPORT europe_ways_gdf
+        europe_ways_gdf = gpd.read_file(str(original_path) + "/gdf_MTP_europe.shp")
+        print(datetime.datetime.now(), 'Nways in europe_ways_gdf: ' + str(len(europe_ways_gdf)))
+
+        secondary_ways_gdf = gpd.read_file(str(secondary_path) + "/gdf_MTP_europe.shp")
+        print(datetime.datetime.now(), 'Nways in secondary_ways_gdf: ' + str(len(secondary_ways_gdf)))
+
+        europe_ways_merged_gdf = pd.concat([europe_ways_gdf,secondary_ways_gdf], sort=True)
+        europe_ways_merged_gdf.to_file(str(out_path) + "/gdf_MTP_europe.shp")
+        print(datetime.datetime.now(), 'Nways in europe_ways_merged_gdf: ' + str(len(europe_ways_merged_gdf)))
+        print('------------------------------------------------------------------------')
+    else:
+        print(datetime.datetime.now(), 'Ways SHP was already merged before.')
+        print('------------------------------------------------------------------------')
 
 
 # -----------------------------------------------------------------------------
 # MERGE GRAPHS
 # -----------------------------------------------------------------------------
-    if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
+    if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or out_path is None:
         print(datetime.datetime.now(), 'Merging graph ...')
-
-        if export_files is False:
+        if out_path is not None:
             # load data
             # file = open(str(out_path) + "/europe_nodes_dict2056.pkl", 'rb')
             file = open(str(out_path) + "/europe_nodes_dict4326.pkl", 'rb')
@@ -185,7 +187,7 @@ def merge_networks_funct(network_objects=None, original_path=None, secondary_pat
         # This will create a graph from scratch with the merged dataframes
         G = create_graph_func(out_path, europe_ways_merged_df, nodes_dict, europe_splitted_ways_merged)
 
-    if export_files is False:
+    if out_path is None:
         network_objects = [G, europe_ways_merged_df, nodes_dict, europe_splitted_ways_merged]
         return network_objects
     print(datetime.datetime.now(), 'Merging of networks finished successfully, files in out_path')

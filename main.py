@@ -10,6 +10,7 @@ from network_parser import parse_network
 # from bc_official import find_bc
 # from data_manipulating import europe_data
 # from routing import rounting_funct
+from full_process import full_process_funct
 
 
 print(datetime.datetime.now(), 'Main script begins')
@@ -27,6 +28,21 @@ print(datetime.datetime.now(), 'Main script begins')
 # print(args, args.shp_file, args.export_files)
 # print(d['raw_file'], d['out_path'])
 
+
+# -------------------------------------------------------------------------------------------------------------
+#  RUN FULL PROCESS
+# -------------------------------------------------------------------------------------------------------------
+# networks = [
+#         # [raw_file, way_types, shp_file],
+#         [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 567, None],
+#         [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 1234, None]
+#                 ]
+# full_process_funct(networks,
+#                    # border_file,
+#                    # official_counting,
+#                    # nuts_path,
+#                    # mikrodaten,
+#                    out_path=r'C:/Users/Ion/IVT/OSM_python/networks')
 # -------------------------------------------------------------------------------------------------------------
 #  PARSE NETWORK FROM OSM FILE AND CREATE DATABASE
 # -------------------------------------------------------------------------------------------------------------
@@ -65,15 +81,13 @@ parse_network(raw_file='/cluster/scratch/gaion/alps-latest.osm.bz2',
               highway_types=1234567,
               shp_file='/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp')
 # parse_network(raw_file='/cluster/scratch/gaion/europe-latest.osm.bz2',
-#               out_path='/cluster/home/gaion/freight/networks/eu1234',
-#               highway_types=123,
-#               shp_file=None,
-#               export_files=True)
+#               out_path='/cluster/home/gaion/freight/networks/ch1234',
+#               highway_types=1234,
+#               shp_file='/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp')
 # parse_network(raw_file='/cluster/scratch/gaion/europe-latest.osm.bz2',
 #               out_path='/cluster/home/gaion/freight/networks/ch567',
 #               highway_types=567,
-#               shp_file='/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp',
-#               export_files=True)
+#               shp_file='/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp')
 # parse_network(raw_file='/cluster/scratch/gaion/europe-latest.osm.bz2',
 #               out_path='/cluster/home/gaion/freight/networks/eu1234',
 #               highway_types=123,

@@ -14,68 +14,69 @@ from data_manipulating import europe_data
 from routing import rounting_funct
 
 def full_process_funct(networks,
-                       border_file,
-                       official_counting,
-                       nuts_path,
-                       mikrodaten,
-                       out_path=None,
-                       ):
-    # networks = [
-    #     # [raw_file, way_types, shp_file],
-    #     ['alps-latest.osm.bz2', 1234567, 'bci_polygon30k_4326.shp'],
-    #     ['europe-latest.osm.bz2', 123, None]
-    #             ]
-
-    network_list = []
+                       border_file=r'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp',
+                       official_count_file=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting.csv',
+                       bc_path=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv',
+                       nuts_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/nuts_borders/nuts_borders",
+                       mikrodaten=r"C:/Users/Ion/IVT/OSM_python/freight_data/freight/gqgv/GQGV_2014/GQGV_2014_Mikrodaten.csv",
+                       out_path=None):
+    # -------------------------------------------------------------------------------------------------------------
+    #  PARSE DEFINED NETWORKS
+    # -------------------------------------------------------------------------------------------------------------
+    networkObj_list = []
     path_list = []
     for raw_file, way_types, shp_file in networks:
         if out_path is not None:
-            export_files = True
             rawfile_name = ntpath.split(raw_file)[1].split('-')[0]
             network_path = str(out_path) + '/' + str(rawfile_name) + str(way_types)
+            # network_path = str(out_path) + '/' + str(fol_name)
             path_list.append(network_path)
         else:
-            export_files = False
+            network_path = None
 
         network_objects = parse_network(raw_file=raw_file,
-                                        out_path=out_path,
+                                        out_path=network_path,
                                         highway_types=way_types,
                                         shp_file=shp_file)
 
-        network_list.append(network_objects)
+        networkObj_list.append(network_objects)
 
-
-    if len(network_list) > 1:
-        if export_files:
-            network_path = str(out_path) + '/' + str(ntpath.split(path_list[0])[1]) + str(ntpath.split(path_list[1])[1])
-            network_objects = merge_networks_funct(network_list,
-                                                   original_path=path_list[0],
-                                                   secondary_path=path_list[1],
-                                                   out_path=network_path)
+    # -------------------------------------------------------------------------------------------------------------
+    #  MERGE NETWORKS IF THERE ARE 2 DIFFERENT NETWORKS
+    # -------------------------------------------------------------------------------------------------------------
+    if len(networkObj_list) > 1:
+        if out_path:
+            out_path = str(ntpath.split(path_list[0])[0]) + '/' + str(ntpath.split(path_list[0])[1]) + str(ntpath.split(path_list[1])[1])
+            print(out_path, path_list)
+            original_path = path_list[0]
+            secondary_path = path_list[1]
+            networkObj_list = None
         else:
-            network_objects = merge_networks_funct(network_objects)
+            original_path = None
+            secondary_path = None
 
+        network_objects = merge_networks_funct(network_objects=networkObj_list,
+                                               original_path=original_path,
+                                               secondary_path=secondary_path,
+                                               out_path=out_path)
+    else:
+        network_objects = networkObj_list[0]
 
+    # -------------------------------------------------------------------------------------------------------------
+    #  FIND BORDER CROSSINGS
+    # -------------------------------------------------------------------------------------------------------------
+    network_objects = find_bc(network_objects=network_objects,
+                    network_path=out_path,
+                    border_file=border_file,
+                    bc_path=bc_path)
 
-
-
-
-
-
-    # if merged_network != None:
-    #     network_path = merged_network
-
-    find_bc(network_path=network_path,
-            border_file=border_file,
-            bc_path=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv')
-
-
-    europe_data(network_path=network_path,
-                nuts_path=nuts_path,
-                europe_data_path=mikrodaten)
-
-
-    rounting_funct(network_path=network_path,
-                   border_file=border_file,
-                   official_count_file=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting.csv',
-                   training=True)
+    network_objects = europe_data(network_objects=network_objects,
+                                  network_path=out_path,
+                                  nuts_path=nuts_path,
+                                  europe_data_path=mikrodaten)
+    #
+    #
+    # rounting_funct(network_path=network_path,
+    #                border_file=border_file,
+    #                official_count_file=official_count_file,
+    #                training=True)

@@ -95,19 +95,40 @@ from progressbar import Percentage, ProgressBar, Bar, ETA
 # CREATE DICTIONARY WITH CENTROID COORDINATES AND CLOSEST NODE IN EUROPE_NETWORK
 
 
-def europe_data(network_path, nuts_path, europe_data_path):
+def europe_data(network_objects, network_path, nuts_path, europe_data_path):
     print(datetime.datetime.now(), 'Europe data manipulating begins ...')
-    out_path = str(network_path) + '/freight_data'
-    network_files = str(network_path) + '/network_files'
-    graph_path = str(network_path) + '/bc_official/eu_network_graph_with_official_bc.gpickle'
+    if network_path is not None:
+        out_path = str(network_path) + '/freight_data'
+        network_files = str(network_path) + '/network_files'
+        graph_path = str(network_path) + '/bc_official/eu_network_graph_with_official_bc.gpickle'
 
-    if not os.path.exists(str(out_path)):
-        os.makedirs(str(out_path))
-        print(datetime.datetime.now(), 'Directory created.')
+        if not os.path.exists(str(out_path)):
+            os.makedirs(str(out_path))
+            print(datetime.datetime.now(), 'Directory created.')
+        else:
+            print(datetime.datetime.now(), 'Directory exists.')
+
+        # Create dictionary with nuts id and coordinates of centroid and closest node id to it
+        # IMPORT G graph with largest network
+        G = nx.read_gpickle(str(graph_path))
+
+        # # IMPORT nodes_europe
+        # file = open(str(network_files) + "/europe_nodes_dict2056.pkl", 'rb')
+        file = open(str(network_files) + "/europe_nodes_dict4326.pkl", 'rb')
+        nodes_europe_2056 = pickle.load(file)
+        file.close()
     else:
-        print(datetime.datetime.now(), 'Directory exists.')
+        out_path = None
+        G = network_objects[0]
+        nodes_europe_2056 = network_objects[2]
 
-    if os.path.isfile(str(out_path) + '/nuts_europe_dict.pkl') == False:
+    print(datetime.datetime.now(), 'Graph has: ' + str(
+        len([len(c) for c in sorted(nx.connected_components(G), key=len, reverse=True)])) + ' island with '
+          + str(G.number_of_nodes()) + '/' + str(G.number_of_edges()) + ' (Nnodes/Nedges)')
+    print(datetime.datetime.now(), 'Nnodes in nodes_europe_2056: ' + str(len(nodes_europe_2056)))
+
+
+    if os.path.isfile(str(out_path) + '/nuts_europe_dict.pkl') is False or out_path is None:
         # load shape files of NUTS for each year
         cols = ['NUTS_ID', 'LEVL_CODE', 'CNTR_CODE', 'NUTS_NAME', 'FID', 'geometry']
         nuts_2016 = gpd.read_file(
@@ -148,25 +169,12 @@ def europe_data(network_path, nuts_path, europe_data_path):
         unique_nuts_gdf = gpd.GeoDataFrame(unique_nuts, columns=cols)
 
         # tranform coordinate system from 4326 to 2056 and export to file
-        unique_nuts_gdf.crs = {"init": "EPSG:4326"}
-        unique_nuts_gdf = unique_nuts_gdf.to_crs({"init": "EPSG:2056"})
+        # unique_nuts_gdf.crs = {"epsg:4326"}
+        # unique_nuts_gdf = unique_nuts_gdf.to_crs("epsg:2056")
         # unique_nuts_gdf.to_file(str(out_path) + "/NUTS_RG_01M_2003to2016_2056.shp", encoding='utf-8')
         # unique_nuts_gdf.to_file(str(out_path) + "/NUTS_RG_01M_2003to2016_2056.shp")
 
         print(datetime.datetime.now(), 'After merging the number of defined NUTS is: ' + str(len(unique_nuts_gdf)))
-
-        # Create dictionary with nuts id and coordinates of centroid and closest node id to it
-        # IMPORT G graph with largest network
-        G = nx.read_gpickle(str(graph_path))
-        print(datetime.datetime.now(), 'Graph has: ' + str(
-            len([len(c) for c in sorted(nx.connected_components(G), key=len, reverse=True)])) + ' island with '
-              + str(G.number_of_nodes()) + '/' + str(G.number_of_edges()) + ' (Nnodes/Nedges)')
-
-        # # IMPORT nodes_europe
-        file = open(str(network_files) + "/europe_nodes_dict2056.pkl", 'rb')
-        nodes_europe_2056 = pickle.load(file)
-        file.close()
-        print(datetime.datetime.now(), 'Nnodes in nodes_europe_2056: ' + str(len(nodes_europe_2056)))
 
         # Build tree for KDTree nearest neighbours search, in G only start and end nodes are included
         # OPTION 3: input only nodes in largest network in G
@@ -205,8 +213,9 @@ def europe_data(network_path, nuts_path, europe_data_path):
             # print(datetime.datetime.now(), i, end="\r")
 
         # EXPORT nuts_centroid_dict TO FILE
-        with open(str(out_path) + '/nuts_europe_dict' + '.pkl', 'wb') as f:
-            pickle.dump(nuts_europe, f, pickle.HIGHEST_PROTOCOL)
+        if out_path is not None:
+            with open(str(out_path) + '/nuts_europe_dict' + '.pkl', 'wb') as f:
+                pickle.dump(nuts_europe, f, pickle.HIGHEST_PROTOCOL)
 
         print(datetime.datetime.now(), len(nuts_europe))
         print('------------------------------------------------------------------------')
@@ -251,10 +260,12 @@ def europe_data(network_path, nuts_path, europe_data_path):
         lambda row: od_func_eu(row['ORIGIN'], row['DESTINATION'], row.name), axis=1)
 
     df = pd.DataFrame(data={"missing_nuts": missing_nuts})
-    df.to_csv(str(out_path) + "/missing_nuts.csv", sep=',', index=False)
+    od_europesum_df = pd.DataFrame.dropna(
+    od_europesum_df)  # in case there are missing nuts not defined in the dictionary
 
-    od_europesum_df = pd.DataFrame.dropna(od_europesum_df)  # in case there are missing nuts not defined in the dictionary
-    od_europesum_df.to_csv(str(out_path) + "/od_europesum_df.csv", sep=",", index=None)
+    if out_path is not None:
+        df.to_csv(str(out_path) + "/missing_nuts.csv", sep=',', index=False)
+        od_europesum_df.to_csv(str(out_path) + "/od_europesum_df.csv", sep=",", index=None)
 
     print(datetime.datetime.now(), 'Process of manipulating europa data finished')
     print('------------------------------------------------------------------------')
