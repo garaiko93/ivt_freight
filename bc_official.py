@@ -38,7 +38,7 @@ CHECK:
 # thresholds: freight_min_value, bc_radius
 
 
-def find_bc(network_objects, network_path, border_file, bc_path):
+def find_bc(network_path, border_file, bc_path, network_objects=None):
     print(datetime.datetime.now(), 'Border crossing search begins ...')
     # -----------------------------------------------------------------------------
     # DEFINE OUT_PATH AND LOAD FILES
@@ -67,7 +67,7 @@ def find_bc(network_objects, network_path, border_file, bc_path):
     ch_border = gpd.read_file(border_file)
     # ch_border.crs = "epsg:2056"
     # ch_border = ch_border.to_crs("epsg:4326")
-    print(ch_border.crs)
+    print(ch_border.crs, europe_network.crs)
     official_df = pd.read_csv(bc_path)
 
     print(datetime.datetime.now(), 'Nlines in ch_border: ' + str(len(ch_border)))

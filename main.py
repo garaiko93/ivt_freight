@@ -5,11 +5,11 @@ import argparse
 
 #  my functions
 from network_parser import parse_network
-# from create_graph import create_graph_func
-# from merge_networks import merge_networks_funct
-# from bc_official import find_bc
-# from data_manipulating import europe_data
-# from routing import rounting_funct
+from create_graph import create_graph_func
+from merge_networks import merge_networks_funct
+from bc_official import find_bc
+from data_manipulating import europe_data
+from routing import rounting_funct
 from full_process import full_process_funct
 
 
@@ -32,17 +32,23 @@ print(datetime.datetime.now(), 'Main script begins')
 # -------------------------------------------------------------------------------------------------------------
 #  RUN FULL PROCESS
 # -------------------------------------------------------------------------------------------------------------
-# networks = [
-#         # [raw_file, way_types, shp_file],
-#         [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 567, None],
-#         [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 1234, None]
-#                 ]
-# full_process_funct(networks,
-#                    # border_file,
-#                    # official_counting,
-#                    # nuts_path,
-#                    # mikrodaten,
-#                    out_path=r'C:/Users/Ion/IVT/OSM_python/networks')
+networks = [
+        # [raw_file, way_types, shp_file],
+    # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 567, None],
+    # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 1234, None],
+    # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 567, None],
+    ['/cluster/scratch/gaion/alps-latest.osm.bz2', 1234567, '/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp'],
+    # ['/cluster/scratch/gaion/europe-latest.osm.bz2', 123, None]
+                ]
+full_process_funct(networks,
+                   # border_file,
+                   # official_counting,
+                   # nuts_path,
+                   # mikrodaten,
+                   # out_path=r'C:/Users/Ion/IVT/OSM_python/networks'
+                   data_path='/cluster/home/gaion/freight/data',
+                   out_path='/cluster/home/gaion/freight/networks/ch1234567')
+
 # -------------------------------------------------------------------------------------------------------------
 #  PARSE NETWORK FROM OSM FILE AND CREATE DATABASE
 # -------------------------------------------------------------------------------------------------------------
@@ -76,10 +82,10 @@ print(datetime.datetime.now(), 'Main script begins')
 #               out_path=d['out_path'],
 #               shp_file=d['shp_file'],
 #               export_files=d['export_files'])
-parse_network(raw_file='/cluster/scratch/gaion/alps-latest.osm.bz2',
-              out_path='/cluster/home/gaion/freight/networks/ch1234567',
-              highway_types=1234567,
-              shp_file='/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp')
+# parse_network(raw_file='/cluster/scratch/gaion/alps-latest.osm.bz2',
+#               out_path='/cluster/home/gaion/freight/networks/ch1234567',
+#               highway_types=1234567,
+#               shp_file='/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp')
 # parse_network(raw_file='/cluster/scratch/gaion/europe-latest.osm.bz2',
 #               out_path='/cluster/home/gaion/freight/networks/ch1234',
 #               highway_types=1234,
@@ -98,11 +104,10 @@ parse_network(raw_file='/cluster/scratch/gaion/alps-latest.osm.bz2',
 #               highway_types=123,
 #               shp_file=None,
 #               export_files=True)
-# parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2',
-#               out_path=r'C:/Users/Ion/IVT/OSM_python/test/lie123',
-#               highway_types=123,
-#               shp_file=None,
-#               export_files=True)
+# parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/alps-latest.osm.bz2',
+#               out_path=r'C:/Users/Ion/IVT/OSM_python/networks/ch1234567',
+#               highway_types=1234567,
+#               shp_file=r'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp',)
 # parse_network(raw_file=r'C:/Users/Ion/IVT/OSM_data/switzerland-latest.osm.bz2',
 #               out_path=r'C:/Users/Ion/IVT/OSM_python/test/ch1/network_files',
 #               highway_types=1,
@@ -135,7 +140,7 @@ parse_network(raw_file='/cluster/scratch/gaion/alps-latest.osm.bz2',
 # find_bc(network_path='/cluster/home/gaion/freight/networks/eu123ch4/network_files',
 #         border_file='/cluster/home/gaion/freight/data/bci_path.shp',
 #         bc_path='/cluster/home/gaion/freight/data/official_counting_ot.csv')
-# find_bc(network_path=r'C:/Users/Ion/IVT/OSM_python/test/lie1234',
+# find_bc(network_path=r'C:/Users/Ion/IVT/OSM_python/networks/ch1234567',
 #         border_file=r'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp',
 #         bc_path=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv')
 

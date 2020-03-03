@@ -19,7 +19,17 @@ def full_process_funct(networks,
                        bc_path=r'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv',
                        nuts_path=r"C:/Users/Ion/IVT/OSM_python/freight_data/nuts_borders/nuts_borders",
                        mikrodaten=r"C:/Users/Ion/IVT/OSM_python/freight_data/freight/gqgv/GQGV_2014/GQGV_2014_Mikrodaten.csv",
-                       out_path=None):
+                       out_path=None,
+                       data_path=None
+                       ):
+
+    if data_path is not None:
+        border_file = str(data_path) + '/bci_path.shp'
+        official_count_file = str(data_path) + '/official_counting.csv'
+        bc_path = str(data_path) + '/official_counting_ot.csv'
+        nuts_path = str(data_path) + '/nuts_borders'
+        mikrodaten = str(data_path) + '/GQGV_2014_Mikrodaten.csv'
+
     # -------------------------------------------------------------------------------------------------------------
     #  PARSE DEFINED NETWORKS
     # -------------------------------------------------------------------------------------------------------------
@@ -28,9 +38,11 @@ def full_process_funct(networks,
     for raw_file, way_types, shp_file in networks:
         if out_path is not None:
             rawfile_name = ntpath.split(raw_file)[1].split('-')[0]
-            network_path = str(out_path) + '/' + str(rawfile_name) + str(way_types)
-            # network_path = str(out_path) + '/' + str(fol_name)
-            path_list.append(network_path)
+            if len(networks) > 1:
+                network_path = str(out_path) + '/' + str(rawfile_name) + str(way_types)
+                path_list.append(network_path)
+            else:
+                network_path = str(out_path)
         else:
             network_path = None
 

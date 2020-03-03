@@ -22,7 +22,10 @@ def create_shp_largest(G, list_nodes, nodes_dict, splitted_ways_dict, gdf, out_p
                                                                            splitted_ways_dict,
                                                                            nodes_dict), axis=1)
     intersected_gdf = gpd.GeoDataFrame(intersected_df)
-    # intersected_gdf['start_node_id', 'end_node_id', 'new_id','geometry'].to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
+
+    intersected_gdf.crs = "epsg:4326"
+    intersected_gdf = intersected_gdf.to_crs("epsg:2056")
+
     intersected_gdf['geometry'].to_file(str(out_path) + "/" + str(filename) + ".shp", encoding='utf-8')
 
     print(datetime.datetime.now(), 'Shp file created successfully with ' + str(len(intersected_df)) + ' ways.')
@@ -46,13 +49,13 @@ def create_graph_func(out_path, gdf, nodes_dict, splitted_ways_dict):
 
         # import the network created from the OSM file
         # train = pd.read_csv(str(out_path) + '\gdf_MTP_europe.csv')
-        edges = gdf[["start_node_id", "end_node_id", "time(s)", "new_id"]]
+        edges = gdf[["start_node_id", "end_node_id", "time(s)", "new_id", "way_type"]]
         edges_list = edges.values.tolist()
 
         # introduce every way as edge with attributes of time and new_id
-        for start, end, time, new_id in edges_list:
-            G.add_edge(int(start), int(end), time=time, new_id=new_id)
-            G_isolated.add_edge(int(start), int(end), time=time, new_id=new_id)
+        for start, end, time, new_id, way_type in edges_list:
+            G.add_edge(int(start), int(end), time=time, new_id=new_id, way_type=way_type)
+            G_isolated.add_edge(int(start), int(end), time=time, new_id=new_id, way_type=way_type)
         start_Nn = G.number_of_nodes()
         start_Ne = G.number_of_edges()
 

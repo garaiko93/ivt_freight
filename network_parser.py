@@ -169,7 +169,7 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
             pickle.dump(lines, f, pickle.HIGHEST_PROTOCOL)
         print(datetime.datetime.now(), 'Raw OSM file splitted into nodes-ways-relations files correctly')
         print('------------------------------------------------------------------------')
-    else:
+    elif os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
         file = open(str(rawfile_path) + '/' + str(rawfile_name) + '_lines.pkl', 'rb')
         lines = pickle.load(file)
         lines_nodes = lines['lines_nodes']
@@ -338,7 +338,7 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
 
         print(datetime.datetime.now(), 'Ways parsed succesfully: ' + str(len(ways_dict)))
         print('------------------------------------------------------------------------')
-    else:
+    elif os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
         file = open(str(out_path) + "/europe_ways_dict.pkl", 'rb')
         ways_dict = pickle.load(file)
 
@@ -382,15 +382,14 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
                         node_sel = nodes_of_ways[i]
                         id = m_id.group(1).decode('utf-8')
                         if node_sel == id:
-                            # lonlat = float(m.group(2)), float(m.group(3))
-                            # lonlat = float(m_lat.group(1)), float(m_lon.group(1))
                             lonlat = float(m_lon.group(1)), float(m_lat.group(1))
-                            # activate this(next 3 lines) if location constrain wants to be set to nodes filtering
                             if shp_file is not None:
                                 in_ch = ch_border30k.contains(Point(lonlat))
-                                if in_ch[0] is True:
+                                if in_ch[0] == True:
                                     nodes_europe[int(id)] = lonlat
-                                    # print(id, lonlat)
+                                    # print(id, lonlat, in_ch[0], len(nodes_europe))
+                                # else:
+                                #     print(in_ch[0])
                             else:
                                 nodes_europe[int(id)] = lonlat
                             # ------------------
@@ -404,7 +403,7 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
             with open(str(out_path) + '/europe_nodes_dict4326' + '.pkl', 'wb') as f:
                 pickle.dump(nodes_europe, f, pickle.HIGHEST_PROTOCOL)
         print(datetime.datetime.now(), 'Nodes parsed succesfully: ' + str(len(nodes_europe)))
-    else:
+    elif os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
         file = open(str(out_path) + "/europe_nodes_dict4326.pkl", 'rb')
         nodes_europe = pickle.load(file)
         print(datetime.datetime.now(),
@@ -442,7 +441,7 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
     #     print('------------------------------------------------------------------------')
 
     # DELETE WAYS WHICH ARE NOT INSIDE swissborder 30k (if only one node of the way is inside it is kept)
-    if (os.path.isfile(str(out_path) + "/europe_filteredways_dict.pkl") is False and shp_file is not None) or \
+    if (os.path.isfile(str(out_path) + "/ways_filtered.txt") is False and shp_file is not None) or \
             (export_files is False and shp_file is not None):
         print(datetime.datetime.now(), 'Deleting ways outside shp file.')
         pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
@@ -463,17 +462,19 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
             os.remove(str(out_path) + "/europe_ways_dict.pkl")
             with open(str(out_path) + "/europe_ways_dict.pkl", 'wb') as f:
                 pickle.dump(ways_dict, f, pickle.HIGHEST_PROTOCOL)
+            f = open(str(out_path) + "/ways_filtered.txt", "w+")
+            f.close()
         print(datetime.datetime.now(), 'New ways in geo area parsed: ' + str(len(ways_dict)))
         print('------------------------------------------------------------------------')
-    elif os.path.isfile(str(out_path) + "/europe_filteredways_dict.pkl") == True:
-        file = open(str(out_path) + "/europe_filteredways_dict.pkl", 'rb')
+
+    elif os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
+        file = open(str(out_path) + "/europe_ways_dict.pkl", 'rb')
         ways_dict = pickle.load(file)
 
     # -----------------------------------------------------------------------------
     # SPLIT WAYS
     # -----------------------------------------------------------------------------
-    if (os.path.isfile(str(out_path) + "/europe_ways_splitted_dict.pkl") == False \
-            or os.path.isfile(str(out_path) + "/europe_splitted_ways.csv") == False) or export_files is False:
+    if os.path.isfile(str(out_path) + "/gdf_MTP_europe.csv") == False or export_files is False:
     # Create dictionary that counts which nodes are part of 2 or more ways and specify how many times (i.e. node_id 1 : is in 3 ways)
         print(datetime.datetime.now(), 'Splitting ways ...')
 
@@ -589,22 +590,22 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
 
         print(datetime.datetime.now(), 'Splitted ways files created: ' + str(len(splitted_ways_df)))
         print('------------------------------------------------------------------------')
-    else:
-        # IMPORT splitted_ways_dict
-        file = open(str(out_path) + '/europe_ways_splitted_dict.pkl','rb')
-        splitted_ways_dict = pickle.load(file)
-        file.close()
+    # elif os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
+    #     # IMPORT splitted_ways_dict
+    #     file = open(str(out_path) + '/europe_ways_splitted_dict.pkl','rb')
+    #     splitted_ways_dict = pickle.load(file)
+    #     file.close()
+    #
+    #     #splitted_ways
+    #     with open(str(out_path) + '/europe_splitted_ways.csv', 'r') as f:
+    #         reader = csv.reader(f)
+    #         splitted_ways_df = list(reader)
+    #
+    #     print(datetime.datetime.now(), 'Splitted ways already exist in out_path, loaded: ' + str(len(splitted_ways_dict)))
+    #     print('------------------------------------------------------------------------')
 
-        #splitted_ways
-        with open(str(out_path) + '/europe_splitted_ways.csv', 'r') as f:
-            reader = csv.reader(f)
-            splitted_ways_df = list(reader)
-
-        print(datetime.datetime.now(), 'Splitted ways already exist in out_path, loaded: ' + str(len(splitted_ways_dict)))
-        print('------------------------------------------------------------------------')
 
 
-    if os.path.isfile(str(out_path) + "/gdf_MTP_europe.csv") == False or export_files is False:
         # Adds length of linestring and time spent on the way at maxspeed value
         # also creates geopandas dataframe and transforms coordinates from 4326 to 2056 system
         gdf = gpd.GeoDataFrame(splitted_ways_df)
@@ -616,7 +617,7 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
         gdf['time(s)'] = gdf.apply(lambda row: way_time_func(row['maxspeed(km/h)'], row['length(m)']), axis=1)
         # print(gdf['geometry'])
         if export_files:
-            gdf[["new_id", "geometry","start_node_id","end_node_id","length(m)","time(s)"]].to_file(str(out_path)+"/gdf_MTP_europe.shp")
+            gdf[["new_id", "geometry", "start_node_id", "end_node_id", "length(m)", "time(s)", "way_type"]].to_file(str(out_path)+"/gdf_MTP_europe.shp")
             gdf.to_csv(str(out_path)+"/gdf_MTP_europe.csv", sep=",", index=None)
 
             gdf = pd.read_csv(str(out_path) + '/gdf_MTP_europe.csv') #this is not necessary but to avoid an error later
@@ -625,7 +626,7 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
             print(datetime.datetime.now(), 'Final geodataframe created: ' + str(len(gdf)))
 
         print('------------------------------------------------------------------------')
-    else:
+    elif os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
         gdf = pd.read_csv(str(out_path) + '/gdf_MTP_europe.csv')
         print(datetime.datetime.now(), 'Csv already exists, loaded: ' + str(len(gdf)))
         print('------------------------------------------------------------------------')
@@ -635,9 +636,12 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
     # -----------------------------------------------------------------------------
     # this will call the function to create the graph with the data created until here
     # create_graph_func(out_path, gdf, nodes_europe_2056, splitted_ways_dict)
-    graph = create_graph_func(out_path, gdf, nodes_europe, splitted_ways_dict)
-
-    print(datetime.datetime.now(), 'Graph creation process finished correctly')
+    if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
+        graph = create_graph_func(out_path, gdf, nodes_europe, splitted_ways_dict)
+        print(datetime.datetime.now(), 'Graph creation process finished correctly')
+        print('------------------------------------------------------------------------')
+    else:
+        print(datetime.datetime.now(), 'Network files already exist in output directory.')
     print('------------------------------------------------------------------------')
     print('------------------------------------------------------------------------')
 

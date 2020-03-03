@@ -49,10 +49,17 @@ def ls_func(lon, lat, name):
     print(name, end="\r")
     return point
 
-# filename = 'C:/Users/Ion/IVT/OSM_python/networks/eu1234/network_files/nodes_dict_4326.pkl'
-filename = '/cluster/home/gaion/freight/networks/eu1234/network_files/europe_nodes_dict4326.pkl'
+filename = r'C:/Users/Ion/IVT/OSM_python/networks/eu123/network_files/europe_nodes_dict4326.pkl'
+# filename = '/cluster/home/gaion/freight/networks/eu1234/network_files/europe_nodes_dict4326.pkl'
 file = open(filename, 'rb')
 nodes_dict = pickle.load(file)
+newdict = {}
+for node in list(nodes_dict):
+    newdict[node] = (nodes_dict[node][1], nodes_dict[node][0])
+
+with open(r'C:/Users/Ion/IVT/OSM_python/networks/eu123/network_files/europe_nodes_dict43262.pkl', 'wb') as f:
+    pickle.dump(newdict, f, pickle.HIGHEST_PROTOCOL)
+
 df = pd.DataFrame.from_dict(nodes_dict)
 df['geometry'] = df.apply(lambda row: ls_func(row['lon'], row['lat'], row.name), axis=1)
 
@@ -60,3 +67,20 @@ gdf = gpd.GeoDataFrame(df)
 gdf.crs = {"epsg:4326"}
 gdf = gdf.to_crs({"epsg:2056"})
 
+import geopandas as gpd
+
+shp_file=r'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_polygon30k_4326.shp'
+ch_border30k = gpd.read_file(str(shp_file))
+# ch_b = ch_border30k.iloc[0]['geometry']
+
+# ch_border30k.crs = {'init': 'epsg:4326'}
+ch_border30k = ch_border30k.to_crs("epsg:2056")
+ch_border30k.crs
+ch_border30k
+
+y,x = 2455975.808, 1115474.254
+x,y = 47.398466, 8.562226
+point = Point(x,y)
+
+ch_border30k.contains(Point(y, x))
+ch_b.contains(Point(y, x))
