@@ -9,7 +9,7 @@ from functools import partial
 import pyproj
 from progressbar import Percentage, ProgressBar, Bar, ETA
 from shapely.ops import transform
-from shapely.geometry import Point
+from shapely.geometry import Point, LinearRing, Polygon
 import shapely.geometry as geo
 import datetime
 import ntpath
@@ -58,11 +58,12 @@ def split_ways(way_id, count_id, copy_nodes, ways_dict, splitted_ways_dict, spli
     ))
     return splitted_ways_dict, splitted_ways
 
-def lonlat_funct(new_id,nodes_list, nodes_europe, splitted_ways_dict):
+def lonlat_funct(new_id,nodes_list, nodes_europe, splitted_ways_dict=None):
     nodes_lonlat = []
     for i in nodes_list:
         nodes_lonlat.append(nodes_europe[int(i)])
-    splitted_ways_dict[new_id].append(nodes_lonlat)
+    if splitted_ways_dict:
+        splitted_ways_dict[new_id].append(nodes_lonlat)
     return nodes_lonlat
 
 def ls_func(nodes_lonlat):
@@ -180,18 +181,61 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
         print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
+    # RELATIONS: like CH border
+    # -----------------------------------------------------------------------------
+    if os.path.isfile(str(out_path) + "/europe_ways_dict.pkl") is False or export_files is False:
+        print(datetime.datetime.now(), 'Parsing of OSM relations begins ...')
+        admin_check = 0
+        relation_check = 0
+        pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
+                                    Percentage(), ' ',
+                                    ETA()], maxval=lines_relations)
+
+        with bz2file.open(str(rawfile_path) + "/" + str(rawfile_name) + "-latest_relations.osm.bz2") as f:
+            for line in f:
+                if b'<relation ' in line:
+                    relation = []
+                    relation_check = 1
+
+                if relation_check == 1:
+                    relation.append(line)
+
+                # if b'<tag k="name:en" v="Switzerland"/>' in line:
+                if b'<tag k="name:en" v="Liechtenstein"/>' in line:
+                    admin_check = 1
+
+                if b'</relation>' in line and admin_check == 1:
+                    border_ways = []
+                    admin_check = 0
+                    relation_check = 0
+                    for subline in relation:
+                        # retrieve id of ways forming ch border
+                        if b'<member type="way"' in subline and b'role="outer"' in subline:
+                            m = re.search(rb'ref="([^"]*)"', subline)
+                            if m:
+                                way_ref = m.group(1).decode('utf-8')
+                                border_ways.append(int(way_ref))
+                    border_ways_sorted = border_ways.copy()
+                    border_ways_sorted.sort()
+                    print(datetime.datetime.now(), 'Relation containing correspondat border was found and parsed.')
+                elif b'</relation>' in line and admin_check == 0:
+                    relation_check = 0
+    # -----------------------------------------------------------------------------
     # WAYS
     # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/europe_ways_dict.pkl") is False or export_files is False:
         print(datetime.datetime.now(), 'Parsing ' + str(filter_highways) + ' ways from ' + str(rawfile_name) + ' OSM xml file ...')
         ways = []
         way_check = 0
+        way_admin = 0
         ways_count = 0
         waynodes_list = []
+        bordernodes_list = []
         tag_list = []
         nodes_of_ways = []
         ms_strings = []
         ways_dict = {}
+        border_ways_dict = {}
         way_maxspeed_f = None
         way_maxspeed_b = None
         way_maxspeed = None
@@ -201,6 +245,7 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
         lanes_b = None
         lanes = None
         nonspeed_ways = 0
+        k = 0
         pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
                                     Percentage(), ' ',
                                     ETA()], maxval=lines_ways)
@@ -215,7 +260,13 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
                     ways_count += 1
                     m = re.search(rb'id="([0-9.]+)"', line)
                     way_id = m.group(1).decode('utf-8')
-                if way_check == 1:
+                    if int(way_id) == border_ways_sorted[k]:
+                        borderwaysnodes = []
+                        way_admin = 1
+                        if k < len(border_ways_sorted) - 1:
+                            k += 1
+
+                if way_check == 1 and way_admin == 0:
                     if b"<nd " in line:
                         # records each node id composing the way (these are reflected as <nd ref='...'> childrent elements into the <way> element)
                         m = re.search(rb'ref="([0-9.]+)"', line)
@@ -320,7 +371,21 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
                         speed_val = None
                         way_check = 0
 
+                # retrieve id of nodes forming ch border
+                if way_admin == 1:
+                    if b"<nd " in line:
+                        m = re.search(rb'ref="([0-9.]+)"', line)
+                        waynode = m.group(1).decode('utf-8')
+                        bordernodes_list.append(int(waynode))
+                        borderwaysnodes.append(int(waynode))
+                    if b"</way>" in line:
+                        way_admin = 0
+                        border_ways_dict[int(way_id)] = borderwaysnodes
+
+
+        bordernodes_list.sort()
         nodes_of_ways.sort(key=float)
+
         # EXPORT ways_europe TO FILE
         if export_files:
             europe_ways_df = pd.DataFrame.from_records(ways, columns=[
@@ -363,7 +428,9 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
             # ch_border30k.crs = {"epsg:2056"}
             # ch_border30k = ch_border30k.to_crs("epsg:4326")
         nodes_europe = {}
+        border_nodes_dict = {}
         i = 0
+        k = 0
         with bz2file.open(str(rawfile_path) + "/" + str(rawfile_name) + "-latest_nodes.osm.bz2") as f:
             # reading line by line the 'nodes' file created at the beginning,
             # data for each node fulfilling the conditions are stored for the output
@@ -387,9 +454,6 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
                                 in_ch = ch_border30k.contains(Point(lonlat))
                                 if in_ch[0] == True:
                                     nodes_europe[int(id)] = lonlat
-                                    # print(id, lonlat, in_ch[0], len(nodes_europe))
-                                # else:
-                                #     print(in_ch[0])
                             else:
                                 nodes_europe[int(id)] = lonlat
                             # ------------------
@@ -398,10 +462,108 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
                                     i += 1
                                     node_sel = nodes_of_ways[i]
 
+                        # retrive coordinates of ch border nodes
+                        if int(id) == bordernodes_list[k]:
+                            lonlat = float(m_lon.group(1)), float(m_lat.group(1))
+                            border_nodes_dict[int(id)] = lonlat
+                            if k < len(bordernodes_list) - 1:
+                                k += 1
+                                if bordernodes_list[k-1] == bordernodes_list[k]:
+                                    k += 1
+
+        # CREATE POLYGON/RING: from swiss OSM defined border
+        # this code concatenates all ways by matching the last and the first nod of two consecutive ways forming the corder
+        coord_list = []
+        print(border_ways)
+        print(border_ways_dict)
+        for i in range(len(border_ways)):
+            way = border_ways[i]
+            way_nodes = border_ways_dict[way]
+
+            prev_way = border_ways[i-1]
+            prev_way_nodes = border_ways_dict[prev_way]
+
+            if prev_way_nodes[-1] != way_nodes[0]:
+                way_nodes.reverse()
+                if prev_way_nodes[-1] == way_nodes[0]:
+                    border_ways_dict[way] = way_nodes
+                    print(way, way_nodes[0])
+                    print('---------')
+                    for node in way_nodes[:-1]:
+                        coord_list.append(border_nodes_dict[node])
+                    print(way, way_nodes[-1])
+                else:
+                    for j in range(i, len(border_ways)):
+                        next_way = border_ways[j]
+                        next_way_nodes = border_ways_dict[next_way]
+                        if next_way == prev_way:
+                            continue
+                        if prev_way_nodes[-1] == next_way_nodes[0]:
+                            print(next_way, next_way_nodes[0])
+                            print('---------')
+                            for node in next_way_nodes[:-1]:
+                                coord_list.append(border_nodes_dict[node])
+                            print(next_way, next_way_nodes[-1])
+                            border_ways[i], border_ways[j] = border_ways[j], border_ways[i]
+                            break
+                        elif prev_way_nodes[-1] == next_way_nodes[-1]:
+                            next_way_nodes.reverse()
+                            border_ways_dict[next_way] = next_way_nodes
+                            print(next_way, next_way_nodes[0])
+                            print('---------')
+                            for node in next_way_nodes[:-1]:
+                                coord_list.append(border_nodes_dict[node])
+                            print(next_way, next_way_nodes[-1])
+                            border_ways[i], border_ways[j] = border_ways[j], border_ways[i]
+                            break
+            else:
+                print(way, way_nodes[0])
+                print('---------')
+                for node in way_nodes[:-1]:
+                    coord_list.append(border_nodes_dict[node])
+                print(way, way_nodes[-1])
+
+        border = Polygon(coord_list)
+        border_gdf = gpd.GeoDataFrame(pd.DataFrame({'geometry': border}, index=[0]))
+        border_gdf.crs = "epsg:4326"
+        border_gdf = border_gdf.to_crs("epsg:2056")
+        print(border_gdf)
+        # border_gdf.to_file(str(out_path) + "/borderOSM_polygon.shp")
+
+        # Create LinearRing of border
+        for i in list(border_ways_dict):
+            border_ways_dict[i] = [border_ways_dict[i]]
+        border_nodes_df = pd.DataFrame.from_dict(border_ways_dict, columns=['nodes_list'], orient='index')
+        border_nodes_df['nodes_lonlat'] = border_nodes_df.apply(lambda row: lonlat_funct(row.name,
+                                                                                         row['nodes_list'],
+                                                                                         border_nodes_dict), axis=1)
+        border_nodes_df['geometry'] = border_nodes_df.apply(lambda row: ls_func(row['nodes_lonlat']), axis=1)
+        border_nodes_gdf = gpd.GeoDataFrame(border_nodes_df)
+        border_nodes_gdf.crs = "epsg:4326"
+        border_nodes_gdf = border_nodes_gdf.to_crs("epsg:2056")
+
+        # ext_ring = geo.LineString(coord_list)
+        # ext_ring = border.exterior
+        # print(border)
+        # print(ext_ring)
+        #
+
+        # print(border_gdf)
+        # ext_ring_gdf = gpd.GeoDataFrame(pd.DataFrame({'geometry': ext_ring}, index=[0]))
+        # ext_ring_gdf.crs = "epsg:4326"
+        # ext_ring_gdf = ext_ring_gdf.to_crs("epsg:2056")
+        print(datetime.datetime.now(), 'Borders were successfully created from OSM data.')
+
         # EXPORT nodes_europe (dictionary) TO FILE
         if export_files:
             with open(str(out_path) + '/europe_nodes_dict4326' + '.pkl', 'wb') as f:
                 pickle.dump(nodes_europe, f, pickle.HIGHEST_PROTOCOL)
+
+            # Export border polygon and path
+            border_gdf.to_file(str(out_path)+"/borderOSM_polygon.shp")
+            border_nodes_gdf['geometry'].to_file(str(out_path) + "/borderOSM_path.shp")
+
+            print(datetime.datetime.now(), 'New shp files containing country borders were exported.')
         print(datetime.datetime.now(), 'Nodes parsed succesfully: ' + str(len(nodes_europe)))
     elif os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
         file = open(str(out_path) + "/europe_nodes_dict4326.pkl", 'rb')
@@ -467,7 +629,7 @@ def parse_network(raw_file, highway_types = 123, shp_file=None, out_path=None):
         print(datetime.datetime.now(), 'New ways in geo area parsed: ' + str(len(ways_dict)))
         print('------------------------------------------------------------------------')
 
-    elif os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
+    elif os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is True:
         file = open(str(out_path) + "/europe_ways_dict.pkl", 'rb')
         ways_dict = pickle.load(file)
 

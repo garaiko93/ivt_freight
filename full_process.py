@@ -77,15 +77,15 @@ def full_process_funct(networks,
     # -------------------------------------------------------------------------------------------------------------
     #  FIND BORDER CROSSINGS
     # -------------------------------------------------------------------------------------------------------------
-    network_objects = find_bc(network_objects=network_objects,
-                    network_path=out_path,
-                    border_file=border_file,
-                    bc_path=bc_path)
-
-    network_objects = europe_data(network_objects=network_objects,
-                                  network_path=out_path,
-                                  nuts_path=nuts_path,
-                                  europe_data_path=mikrodaten)
+    # network_objects = find_bc(network_objects=network_objects,
+    #                 network_path=out_path,
+    #                 border_file=border_file,
+    #                 bc_path=bc_path)
+    #
+    # network_objects = europe_data(network_objects=network_objects,
+    #                               network_path=out_path,
+    #                               nuts_path=nuts_path,
+    #                               europe_data_path=mikrodaten)
     #
     #
     # rounting_funct(network_path=network_path,

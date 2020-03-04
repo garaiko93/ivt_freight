@@ -4,12 +4,12 @@ import datetime
 import argparse
 
 #  my functions
-from network_parser import parse_network
-from create_graph import create_graph_func
-from merge_networks import merge_networks_funct
-from bc_official import find_bc
-from data_manipulating import europe_data
-from routing import rounting_funct
+# from network_parser import parse_network
+# from create_graph import create_graph_func
+# from merge_networks import merge_networks_funct
+# from bc_official import find_bc
+# from data_manipulating import europe_data
+# from routing import rounting_funct
 from full_process import full_process_funct
 
 
@@ -35,9 +35,9 @@ print(datetime.datetime.now(), 'Main script begins')
 networks = [
         # [raw_file, way_types, shp_file],
     # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 567, None],
-    # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 1234, None],
+    [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 123, None]
     # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 567, None],
-    ['/cluster/scratch/gaion/alps-latest.osm.bz2', 1234567, '/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp'],
+    # ['/cluster/scratch/gaion/alps-latest.osm.bz2', 1234567, '/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp'],
     # ['/cluster/scratch/gaion/europe-latest.osm.bz2', 123, None]
                 ]
 full_process_funct(networks,
@@ -45,9 +45,10 @@ full_process_funct(networks,
                    # official_counting,
                    # nuts_path,
                    # mikrodaten,
-                   # out_path=r'C:/Users/Ion/IVT/OSM_python/networks'
-                   data_path='/cluster/home/gaion/freight/data',
-                   out_path='/cluster/home/gaion/freight/networks/ch1234567')
+                   out_path=r'C:/Users/Ion/IVT/OSM_python/networks/lie1234'
+                   # data_path='/cluster/home/gaion/freight/data',
+                   # out_path='/cluster/home/gaion/freight/networks/eu123'
+                )
 
 # -------------------------------------------------------------------------------------------------------------
 #  PARSE NETWORK FROM OSM FILE AND CREATE DATABASE

@@ -253,7 +253,7 @@ def europe_data(network_objects, network_path, nuts_path, europe_data_path):
             if destination not in missing_nuts:
                 missing_nuts.append(destination)
 
-        print(datetime.datetime.now(), rowname, end="\r")
+        # print(datetime.datetime.now(), rowname, end="\r")
         return pd.Series([o_node_id, d_node_id])
 
     od_europesum_df[['o_node_id', 'd_node_id']] = od_europesum_df.apply(

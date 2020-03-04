@@ -84,3 +84,65 @@ point = Point(x,y)
 
 ch_border30k.contains(Point(y, x))
 ch_b.contains(Point(y, x))
+
+import bz2file
+admin_check = 0
+with bz2file.open(r'C:/Users/Ion/IVT/OSM_data/alps-latest_relations.osm.bz2') as f:
+    for line in f:
+        if b'<relation ' in line:
+            relation = []
+            relation_check = 1
+
+        if relation_check == 1:
+            relation.append(line)
+
+        # if b'<tag k="boundary" v="administrative"/>' in line:
+        # if b'<tag k="name:en" v="Switzerland"/>' in line:
+        if b'<tag k="name" v="Schweiz/Suisse/Svizzera/Svizra"/>' in line:
+        # if b'<tag k="admin_level" v="2"/>' in line:
+            admin_check = 1
+
+        if b'</relation>' in line and admin_check == 1:
+            admin_check = 0
+            relation_check = 0
+            for i in relation:
+                print(i)
+        elif b'</relation>' in line and admin_check == 0:
+            relation_check = 0
+
+import bz2file
+import re
+admin_check = 0
+with bz2file.open(r'C:/Users/Ion/IVT/OSM_data/alps-latest_relations.osm.bz2') as f:
+    for line in f:
+        if b'<relation ' in line:
+            relation = []
+            relation_check = 1
+
+        if relation_check == 1:
+            relation.append(line)
+
+        # if b'<tag k="boundary" v="administrative"/>' in line:
+        # if b'<tag k="name:en" v="Switzerland"/>' in line:
+        if b'<tag k="name:en" v="Liechtenstein"/>' in line:
+        # if b'<tag k="admin_level" v="2"/>' in line:
+            admin_check = 1
+
+        if b'</relation>' in line and admin_check == 1:
+            border_ways = []
+            admin_check = 0
+            relation_check = 0
+            for subline in relation:
+                print(subline)
+                if b'<member type="way"' in subline and b'role="outer"' in subline:
+                    m = re.search(rb'ref="([^"]*)"', subline)
+                    if m:
+                        way_ref = m.group(1).decode('utf-8')
+                        border_ways.append(int(way_ref))
+
+            border_ways_sorted = border_ways.copy()
+            border_ways_sorted.sort()
+            print(border_ways)
+            # print(border_ways_sorted)
+        elif b'</relation>' in line and admin_check == 0:
+            relation_check = 0
