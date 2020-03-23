@@ -34,20 +34,22 @@ print(datetime.datetime.now(), 'Main script begins')
 # -------------------------------------------------------------------------------------------------------------
 networks = [
         # [raw_file, way_types, shp_file],
+    # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 1234567, None, 'lie123']
+    # ['C:/Users/Ion/IVT/OSM_data/alps-latest.osm.bz2', 1234567, None]
     # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 567, None],
-    [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 123, None]
-    # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 567, None],
-    # ['/cluster/scratch/gaion/alps-latest.osm.bz2', 1234567, '/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp'],
-    # ['/cluster/scratch/gaion/europe-latest.osm.bz2', 123, None]
+    # ['/cluster/scratch/gaion/alps-latest.osm.bz2', 123, '/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp'],
+    # ['/cluster/scratch/gaion/alps-latest.osm.bz2', 1234567, None, 'ch1234567'],
+    ['/cluster/scratch/gaion/europe-latest.osm.bz2', 123, None, 'eu123']
                 ]
 full_process_funct(networks,
                    # border_file,
                    # official_counting,
                    # nuts_path,
                    # mikrodaten,
-                   out_path=r'C:/Users/Ion/IVT/OSM_python/networks/lie1234'
-                   # data_path='/cluster/home/gaion/freight/data',
-                   # out_path='/cluster/home/gaion/freight/networks/eu123'
+                   # out_path='C:/Users/Ion/IVT/OSM_python/networks',
+                   out_path='/cluster/home/gaion/freight/networks',
+                   # data_path='C:/Users/Ion/IVT/OSM_data'
+                   data_path='/cluster/home/gaion/freight/data'
                 )
 
 # -------------------------------------------------------------------------------------------------------------

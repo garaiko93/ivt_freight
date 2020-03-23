@@ -41,79 +41,79 @@ def sw_nodes(new_id, splitted_ways_dict, nodes_dict):
 
 
 def create_graph_func(out_path, gdf, nodes_dict, splitted_ways_dict):
-    if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or out_path is not None:
-        print(datetime.datetime.now(), 'Graph creation begins ...')
-        # create a graph from network
-        G = nx.Graph()
-        G_isolated = nx.Graph()
+    # if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or out_path is not None:
+    print(datetime.datetime.now(), 'Graph creation begins ...')
+    # create a graph from network
+    G = nx.Graph()
+    G_isolated = nx.Graph()
 
-        # import the network created from the OSM file
-        # train = pd.read_csv(str(out_path) + '\gdf_MTP_europe.csv')
-        edges = gdf[["start_node_id", "end_node_id", "time(s)", "new_id", "way_type"]]
-        edges_list = edges.values.tolist()
+    # import the network created from the OSM file
+    # train = pd.read_csv(str(out_path) + '\gdf_MTP_europe.csv')
+    edges = gdf[["start_node_id", "end_node_id", "time(s)", "new_id", "way_type", "length(m)"]]
+    edges_list = edges.values.tolist()
 
-        # introduce every way as edge with attributes of time and new_id
-        for start, end, time, new_id, way_type in edges_list:
-            G.add_edge(int(start), int(end), time=time, new_id=new_id, way_type=way_type)
-            G_isolated.add_edge(int(start), int(end), time=time, new_id=new_id, way_type=way_type)
-        start_Nn = G.number_of_nodes()
-        start_Ne = G.number_of_edges()
+    # introduce every way as edge with attributes of time and new_id
+    for start, end, time, new_id, way_type, length in edges_list:
+        G.add_edge(int(start), int(end), length=length, time=time, new_id=new_id, way_type=way_type)
+        G_isolated.add_edge(int(start), int(end), length=length, time=time, new_id=new_id, way_type=way_type)
+    start_Nn = G.number_of_nodes()
+    start_Ne = G.number_of_edges()
 
-        # export graph of original network to file (without excluding any edge or island)
-        if out_path is not None:
-            nx.write_gpickle(G, str(out_path) + "/eu_network_graph_bytime.gpickle")
+    # export graph of original network to file (without excluding any edge or island)
+    if out_path is not None:
+        nx.write_gpickle(G, str(out_path) + "/eu_network_graph_bytime.gpickle")
 
-        # Identify the largest component and the "isolated" nodes
-        components = list(nx.connected_components(G))  # list because it returns a generator
-        components.sort(key=len, reverse=True)
-        longest_networks = []
-        for i in range(0, len(components)):
-            net = components[i]
-            longest_networks.append(len(net))
-            if i == 10:
-                break
+    # Identify the largest component and the "isolated" nodes
+    components = list(nx.connected_components(G))  # list because it returns a generator
+    components.sort(key=len, reverse=True)
+    longest_networks = []
+    for i in range(0, len(components)):
+        net = components[i]
+        longest_networks.append(len(net))
+        if i == 10:
+            break
 
-        largest = components.pop(0)
-        isolated = set(g for cc in components for g in cc)
-        num_isolated = G.order() - len(largest)
+    largest = components.pop(0)
+    isolated = set(g for cc in components for g in cc)
+    num_isolated = G.order() - len(largest)
 
-        # keep only the largest island of the original graph (so all nodes are reachable in the graph)
-        # remove isolated nodes from G
-        G.remove_nodes_from(isolated)
-        end_Nn = G.number_of_nodes()
-        end_Ne = G.number_of_edges()
+    # keep only the largest island of the original graph (so all nodes are reachable in the graph)
+    # remove isolated nodes from G
+    G.remove_nodes_from(isolated)
+    end_Nn = G.number_of_nodes()
+    end_Ne = G.number_of_edges()
 
-        # export final graph only containing largest island from the network to file
-        if out_path is not None:
-            nx.write_gpickle(G, str(out_path) + "/eu_network_largest_graph_bytime.gpickle")
+    # export final graph only containing largest island from the network to file
+    if out_path is not None:
+        nx.write_gpickle(G, str(out_path) + "/eu_network_largest_graph_bytime.gpickle")
 
-            # Create shp file with final graph
-            print(datetime.datetime.now(), 'Creating shp file of largest network with epsg:2056 ...')
-            create_shp_largest(G, [], nodes_dict, splitted_ways_dict, gdf, out_path, 'eu_network_largest_graph_bytime')
+        # Create shp file with final graph
+        print(datetime.datetime.now(), 'Creating shp file of largest network with epsg:2056 ...')
+        create_shp_largest(G, [], nodes_dict, splitted_ways_dict, gdf, out_path, 'eu_network_largest_graph_bytime')
 
-        print(datetime.datetime.now(), 'Input edges: ' + str(len(edges_list)))
-        print(datetime.datetime.now(), 'Start/End N_nodes: ' + str(start_Nn) + '/' + str(end_Nn))
-        print(datetime.datetime.now(), 'Start/End N_edges: ' + str(start_Ne) + '/' + str(end_Ne))
+    print(datetime.datetime.now(), 'Input edges: ' + str(len(edges_list)))
+    print(datetime.datetime.now(), 'Start/End N_nodes: ' + str(start_Nn) + '/' + str(end_Nn))
+    print(datetime.datetime.now(), 'Start/End N_edges: ' + str(start_Ne) + '/' + str(end_Ne))
 
-        print(datetime.datetime.now(), 'N isolated nodes: ' + str(num_isolated))
-        print(datetime.datetime.now(), '10 largest networks (nodes): ' + str(longest_networks))
-        print('------------------------------------------------------------------------')
-    else:
-        G = nx.read_gpickle(str(out_path) + '/eu_network_largest_graph_bytime.gpickle')
-        G_isolated = nx.read_gpickle(str(out_path) + '/eu_network_graph_bytime.gpickle')
+    print(datetime.datetime.now(), 'N isolated nodes: ' + str(num_isolated))
+    print(datetime.datetime.now(), '10 largest networks (nodes): ' + str(longest_networks))
+    print('------------------------------------------------------------------------')
+    # else:
+    #     G = nx.read_gpickle(str(out_path) + '/eu_network_largest_graph_bytime.gpickle')
+    #     G_isolated = nx.read_gpickle(str(out_path) + '/eu_network_graph_bytime.gpickle')
 
-        # Identify the largest component and the "isolated" nodes
-        components = list(nx.connected_components(G_isolated))  # list because it returns a generator
-        components.sort(key=len, reverse=True)
-        longest_networks = []
-        for i in range(0, len(components)):
-            net = components[i]
-            longest_networks.append(len(net))
-            if i == 10:
-                break
-        isolated = set(g for cc in components for g in cc)
-        print(datetime.datetime.now(), 'Graph with largest network already exists, graph loaded')
-        print('------------------------------------------------------------------------')
+    # Identify the largest component and the "isolated" nodes
+    # components = list(nx.connected_components(G_isolated))  # list because it returns a generator
+    # components.sort(key=len, reverse=True)
+    # longest_networks = []
+    # for i in range(0, len(components)):
+    #     net = components[i]
+    #     longest_networks.append(len(net))
+    #     if i == 10:
+    #         break
+    # isolated = set(g for cc in components for g in cc)
+    # print(datetime.datetime.now(), 'Graph with largest network already exists, graph loaded')
+    # print('------------------------------------------------------------------------')
 
     return G
 

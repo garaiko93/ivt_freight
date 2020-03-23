@@ -89,6 +89,55 @@ from progressbar import Percentage, ProgressBar, Bar, ETA
 # ch_border = ch_border_shp['geometry'][0]
 # ch_border
 
+
+def nuts_merging(nuts_path):
+    # load shape files of NUTS for each year
+    cols = ['NUTS_ID', 'LEVL_CODE', 'CNTR_CODE', 'NUTS_NAME', 'FID', 'geometry']
+    nuts_2016 = gpd.read_file(
+        str(nuts_path) + "/ref-nuts-2016-01m.shp/NUTS_RG_01M_2016_4326.shp/NUTS_RG_01M_2016_4326.shp",
+        encoding='utf8')
+    nuts_2013 = gpd.read_file(
+        str(nuts_path) + "/ref-nuts-2013-01m.shp/NUTS_RG_01M_2013_4326.shp/NUTS_RG_01M_2013_4326.shp",
+        encoding='utf8')
+    nuts_2010 = gpd.read_file(
+        str(nuts_path) + "/ref-nuts-2010-01m.shp/NUTS_RG_01M_2010_4326.shp/NUTS_RG_01M_2010_4326.shp",
+        encoding='utf8')
+    nuts_2006 = gpd.read_file(
+        str(nuts_path) + "/ref-nuts-2006-01m.shp/NUTS_RG_01M_2006_4326.shp/NUTS_RG_01M_2006_4326.shp",
+        encoding='utf8')
+    nuts_2003 = gpd.read_file(
+        str(nuts_path) + "/ref-nuts-2003-01m.shp/NUTS_RG_01M_2003_4326.shp/NUTS_RG_01M_2003_4326.shp",
+        encoding='utf8')
+
+    nuts_2016 = nuts_2016[cols]
+    nuts_2013 = nuts_2013[cols]
+    nuts_2010 = nuts_2010[cols]
+    nuts_2006 = nuts_2006[cols]
+    nuts_2003 = nuts_2003[cols]
+
+    # merge all nuts from all files keeping the latest version of each one (polygon)
+    nutsid_bag = []
+    unique_nuts = []
+    all_nuts = [nuts_2016, nuts_2013, nuts_2010, nuts_2006, nuts_2003]
+
+    for i in range(0, len(all_nuts)):
+        nuts_1year = all_nuts[i]
+        for j in range(0, len(nuts_1year)):
+            nutsid = nuts_1year.iloc[j]['NUTS_ID']
+            if nutsid not in nutsid_bag:
+                nutsid_bag.append(nutsid)
+                unique_nuts.append(list(nuts_1year.iloc[j]))
+
+    unique_nuts_gdf = gpd.GeoDataFrame(unique_nuts, columns=cols)
+
+    # tranform coordinate system from 4326 to 2056 and export to file
+    # unique_nuts_gdf.crs = {"epsg:4326"}
+    # unique_nuts_gdf = unique_nuts_gdf.to_crs("epsg:2056")
+    # unique_nuts_gdf.to_file(str(out_path) + "/NUTS_RG_01M_2003to2016_2056.shp", encoding='utf-8')
+    # unique_nuts_gdf.to_file(str(out_path) + "/NUTS_RG_01M_2003to2016_2056.shp")
+
+    print(datetime.datetime.now(), 'After merging the number of defined NUTS is: ' + str(len(unique_nuts_gdf)))
+    return unique_nuts_gdf
 # -----------------------------------------------------------------------------
 # EUROPE DATA
 # -----------------------------------------------------------------------------
@@ -129,52 +178,8 @@ def europe_data(network_objects, network_path, nuts_path, europe_data_path):
 
 
     if os.path.isfile(str(out_path) + '/nuts_europe_dict.pkl') is False or out_path is None:
-        # load shape files of NUTS for each year
-        cols = ['NUTS_ID', 'LEVL_CODE', 'CNTR_CODE', 'NUTS_NAME', 'FID', 'geometry']
-        nuts_2016 = gpd.read_file(
-            str(nuts_path) + "/ref-nuts-2016-01m.shp/NUTS_RG_01M_2016_4326.shp/NUTS_RG_01M_2016_4326.shp",
-            encoding='utf8')
-        nuts_2013 = gpd.read_file(
-            str(nuts_path) + "/ref-nuts-2013-01m.shp/NUTS_RG_01M_2013_4326.shp/NUTS_RG_01M_2013_4326.shp",
-            encoding='utf8')
-        nuts_2010 = gpd.read_file(
-            str(nuts_path) + "/ref-nuts-2010-01m.shp/NUTS_RG_01M_2010_4326.shp/NUTS_RG_01M_2010_4326.shp",
-            encoding='utf8')
-        nuts_2006 = gpd.read_file(
-            str(nuts_path) + "/ref-nuts-2006-01m.shp/NUTS_RG_01M_2006_4326.shp/NUTS_RG_01M_2006_4326.shp",
-            encoding='utf8')
-        nuts_2003 = gpd.read_file(
-            str(nuts_path) + "/ref-nuts-2003-01m.shp/NUTS_RG_01M_2003_4326.shp/NUTS_RG_01M_2003_4326.shp",
-            encoding='utf8')
-
-        nuts_2016 = nuts_2016[cols]
-        nuts_2013 = nuts_2013[cols]
-        nuts_2010 = nuts_2010[cols]
-        nuts_2006 = nuts_2006[cols]
-        nuts_2003 = nuts_2003[cols]
-
-        # merge all nuts from all files keeping the latest version of each one (polygon)
-        nutsid_bag = []
-        unique_nuts = []
-        all_nuts = [nuts_2016, nuts_2013, nuts_2010, nuts_2006, nuts_2003]
-
-        for i in range(0, len(all_nuts)):
-            nuts_1year = all_nuts[i]
-            for j in range(0, len(nuts_1year)):
-                nutsid = nuts_1year.iloc[j]['NUTS_ID']
-                if nutsid not in nutsid_bag:
-                    nutsid_bag.append(nutsid)
-                    unique_nuts.append(list(nuts_1year.iloc[j]))
-
-        unique_nuts_gdf = gpd.GeoDataFrame(unique_nuts, columns=cols)
-
-        # tranform coordinate system from 4326 to 2056 and export to file
-        # unique_nuts_gdf.crs = {"epsg:4326"}
-        # unique_nuts_gdf = unique_nuts_gdf.to_crs("epsg:2056")
-        # unique_nuts_gdf.to_file(str(out_path) + "/NUTS_RG_01M_2003to2016_2056.shp", encoding='utf-8')
-        # unique_nuts_gdf.to_file(str(out_path) + "/NUTS_RG_01M_2003to2016_2056.shp")
-
-        print(datetime.datetime.now(), 'After merging the number of defined NUTS is: ' + str(len(unique_nuts_gdf)))
+        # Merge data from NUTS into one gdf:
+        unique_nuts_gdf = nuts_merging(nuts_path)
 
         # Build tree for KDTree nearest neighbours search, in G only start and end nodes are included
         # OPTION 3: input only nodes in largest network in G
