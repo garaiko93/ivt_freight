@@ -202,8 +202,8 @@ def parse_network(raw_file, highway_types = 123, data_path=None, shp_file=None, 
     # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/europe_ways_dict.pkl") is False or export_files is False:
         print(datetime.datetime.now(), 'Parsing of OSM relations begins ...')
-        # country_border = b'Switzerland'
-        country_border = b'Liechtenstein'
+        country_border = b'Switzerland'
+        # country_border = b'Liechtenstein'
         admin_check = 0
         relation_check = 0
         pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
@@ -564,7 +564,7 @@ def parse_network(raw_file, highway_types = 123, data_path=None, shp_file=None, 
             border_gdf.to_file(str(data_path)+"/borderOSM_polygon_4326.shp")
             border_gdf.crs = "epsg:4326"
             border_gdf = border_gdf.to_crs("epsg:2056")
-            border_gdf.to_file(str(data_path)+"/borderOSM_polygon_2056.shp")
+            border_gdf.to_file(str(data_path)+"/" + country_border.decode('ascii') + "_OSM_polygon_2056.shp")
             # border_nodes_gdf['geometry'].to_file(str(data_path) + "/borderOSM_path.shp")
             print(datetime.datetime.now(), 'New shp files containing country borders were exported.')
         print(datetime.datetime.now(), 'Nodes parsed succesfully: ' + str(len(nodes_europe)))

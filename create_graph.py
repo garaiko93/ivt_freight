@@ -6,11 +6,12 @@ import os
 import datetime
 
 
-def create_shp_largest(G, list_nodes, nodes_dict, splitted_ways_dict, gdf, out_path, filename):
-    if len(list_nodes) == 0:
-        g_edges = G.edges()
-    else:
+def create_shp_largest(G, nodes_dict, splitted_ways_dict, gdf, out_path, filename, list_nodes=None):
+    if list_nodes:
         g_edges = G.edges(list_nodes)
+    else:
+        g_edges = G.edges()
+
     g_edges_df1 = pd.DataFrame.from_records(list(g_edges), columns=["start_node_id", "end_node_id"])
     g_edges_df2 = pd.DataFrame.from_records(list(g_edges), columns=["end_node_id", "start_node_id"])
     all_edges = gdf[['new_id', 'start_node_id', 'end_node_id', 'nodes_list']]
@@ -89,7 +90,7 @@ def create_graph_func(out_path, gdf, nodes_dict, splitted_ways_dict):
 
         # Create shp file with final graph
         print(datetime.datetime.now(), 'Creating shp file of largest network with epsg:2056 ...')
-        create_shp_largest(G, [], nodes_dict, splitted_ways_dict, gdf, out_path, 'eu_network_largest_graph_bytime')
+        create_shp_largest(G, nodes_dict, splitted_ways_dict, gdf, out_path, 'eu_network_largest_graph_bytime', list_nodes=None)
 
     print(datetime.datetime.now(), 'Input edges: ' + str(len(edges_list)))
     print(datetime.datetime.now(), 'Start/End N_nodes: ' + str(start_Nn) + '/' + str(end_Nn))

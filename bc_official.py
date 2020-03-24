@@ -442,6 +442,7 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
                            network_objects[1],
                            network_objects[2],
                            network_objects[3],
+                           network_objetcs[4],
                            ch_bc,
                            bc_df,
                            wayid_by_cp
