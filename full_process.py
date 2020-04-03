@@ -81,6 +81,8 @@ def full_process_funct(networks,
                                    bc_df,                 6
                                    wayid_by_cp]           7
         '''
+
+        # this needs networks eu123 and ch1234567 to be already parsed
         connect_bc_funct(cut_nonelected=False,
                          network_objects=network_objects,
                          data_path=data_path,

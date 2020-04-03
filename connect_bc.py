@@ -7,6 +7,7 @@ import networkx as nx
 import datetime
 from scipy import spatial
 import os
+import random
 import copy
 
 from data_manipulating import nuts_merging
@@ -60,17 +61,16 @@ def route_bc(node, g_123, g_1234567, nodes_europe, tree, G_lonlat, centroid=None
     # tree=g_in_tree
     # G_lonlat=g_in_lonlat
     # This finds the closest node in network ch1234567 of the centroid to start the routing
-    if centroid:
+    if node is None:
         nn = g_in_tree.query(centroid)
         coord = g_in_lonlat[nn[1]]
-        node = int(
-            list(nodes_europe.keys())[list(nodes_europe.values()).index((coord[0], coord[1]))])
+        node = int(list(nodes_europe.keys())[list(nodes_europe.values()).index((coord[0], coord[1]))])
+        print('node found', node)
 
     # this gives the closest nodes id (of ch 123 to route with) from the given node id, this can be: border crossing or nuts centroids closest node id
     nn = tree.query(nodes_europe[node])
     coord = G_lonlat[nn[1]]
-    closest_node_id = int(
-        list(nodes_europe.keys())[list(nodes_europe.values()).index((coord[0], coord[1]))])
+    closest_node_id = int(list(nodes_europe.keys())[list(nodes_europe.values()).index((coord[0], coord[1]))])
 
     # then rout both nodes
     try:
@@ -79,12 +79,15 @@ def route_bc(node, g_123, g_1234567, nodes_europe, tree, G_lonlat, centroid=None
             node1 = path[i]
             node2 = path[i + 1]
             new_id = g_1234567[node1][node2]['new_id']
+            length = g_1234567[node1][node2]['length']
             time = g_1234567[node1][node2]['time']
             way_type = g_1234567[node1][node2]['way_type']
 
             # and save the ways, implement them into ch_123
-            g_123.add_edge(node1, node2, time=time, new_id=new_id, way_type=way_type)
+            g_123.add_edge(node1, node2, time=time, length=length, new_id=new_id, way_type=way_type)
+        # print('path found')
     except:
+        # print('path not found')
         pass
     return g_123
 
@@ -167,13 +170,13 @@ def connect_bc_funct(cut_nonelected=False, network_objects=None, data_path=None,
 
     print(datetime.datetime.now(), 'Starting process of connecting border points and swiss nuts with unclassified ways.')
     print('------------------------------------------------------------------------')
-    # out_path = r'C:/Users/Ion/IVT/OSM_python/networks/ch1234567'
+    # out_path = r'C:/Users/Ion/IVT/OSM_python/networks/'
     # data_path = r'C:/Users/Ion/IVT/OSM_data'
     # border_file = str(data_path) + '/borderOSM_polygon_2056.shp'
     # network_objects = None
 
     print(datetime.datetime.now(), 'Loading files.')
-    if network_objects:
+    if out_path is None:
         g_ch1234567 = network_objects[0]
         gdf = network_objects[1]
         splitted_ways_dict = network_objects[2]
@@ -183,8 +186,12 @@ def connect_bc_funct(cut_nonelected=False, network_objects=None, data_path=None,
     else:
         ch1234567_path = str(out_path) + '/ch1234567'
         eu123_path = str(out_path) + '/eu123'
-    # files from ch1234567
-        g_ch1234567 = nx.read_gpickle(str(ch1234567_path) + '/network_files/eu_network_graph_bytime.gpickle')
+    # files from ch1234567 and eu123
+    #     g_ch1234567 = nx.read_gpickle(str(ch1234567_path) + '/network_files/eu_network_graph_bytime.gpickle')
+        # i think this should also be without islands, to avoid finding a closest node
+        g_ch1234567 = nx.read_gpickle(str(ch1234567_path) + '/network_files/eu_network_largest_graph_bytime.gpickle')
+        # here is preferable to avoid islands as they may be far from switzerland
+        g_eu123 = nx.read_gpickle(str(eu123_path) + '/network_files/eu_network_largest_graph_bytime.gpickle')
         crossing_onlypoints = gpd.read_file(str(ch1234567_path) + '/bc_official/crossing_onlypoints.shp')
         gdf = pd.read_csv(str(ch1234567_path) + "/network_files/gdf_MTP_europe.csv", low_memory=False)
 
@@ -206,32 +213,43 @@ def connect_bc_funct(cut_nonelected=False, network_objects=None, data_path=None,
     print(datetime.datetime.now(), 'Files loaded.')
     print('------------------------------------------------------------------------')
 
-    if os.path.isfile(str(out_path) + "/network_files/ch_connected_graph_bytime.gpickle") is False or out_path is None:
-        g_ch123 = copy.deepcopy(g_ch1234567)
-        print(datetime.datetime.now(), 'Nodes/ways in g_ch1234567: ' + str(len(g_ch123.nodes)) + '/' + str(len(g_ch123.edges)))
+    # Creates graph of ch123 from graph ch1234567 and split into IN and OUT graphs
+    g_ch123 = copy.deepcopy(g_ch1234567)
+    print(datetime.datetime.now(), 'Nodes/ways in g_ch1234567: ' + str(len(g_ch123.nodes)) + '/' + str(len(g_ch123.edges)))
 
-        for (u, v, c) in g_ch1234567.edges.data('way_type'):
-            for way_type in ['secondary', 'tertiary', 'residential', 'unclassified']:
-                if way_type in c:
-                    g_ch123.remove_edge(u, v)
-        g_ch123.remove_nodes_from(list(nx.isolates(g_ch123)))
-        print(datetime.datetime.now(), 'Nodes/ways in g_ch123: ' + str(len(g_ch123.nodes)) + '/ ' + str(len(g_ch123.edges)))
-        print('------------------------------------------------------------------------')
+    for (u, v, c) in g_ch1234567.edges.data('way_type'):
+        for way_type in ['secondary', 'tertiary', 'residential', 'unclassified']:
+            if way_type in c:
+                g_ch123.remove_edge(u, v)
+    g_ch123.remove_nodes_from(list(nx.isolates(g_ch123)))
+    print(datetime.datetime.now(), 'Nodes/ways in g_ch123: ' + str(len(g_ch123.nodes)) + '/ ' + str(len(g_ch123.edges)))
+    print('------------------------------------------------------------------------')
 
+    if os.path.isfile(str(ch1234567_path) + '/network_files/g_ch1234567_out.gpickle') is False or out_path is None:
         # This splits both network graphs between in and out of the swiss border
         g_ch123_in, g_ch123_out = split_graphs(g_ch123, ch_border, nodes_europe)
         g_ch1234567_in, g_ch1234567_out = split_graphs(g_ch1234567, ch_border, nodes_europe)
-        print('------------------------------------------------------------------------')
 
-        # This creates the tree of the ch123 graphs to find the closest nodes
-        g_in_lonlat, g_in_tree = closest_node(g_ch123_in, nodes_europe)
-        g_out_lonlat, g_out_tree = closest_node(g_ch123_out, nodes_europe)
-        print('------------------------------------------------------------------------')
+        nx.write_gpickle(g_ch123_in, str(ch1234567_path) + '/network_files/g_ch123_in.gpickle')
+        nx.write_gpickle(g_ch123_out, str(ch1234567_path) + '/network_files/g_ch123_out.gpickle')
+        nx.write_gpickle(g_ch1234567_in, str(ch1234567_path) + '/network_files/g_ch1234567_in.gpickle')
+        nx.write_gpickle(g_ch1234567_out, str(ch1234567_path) + '/network_files/g_ch1234567_out.gpickle')
+    else:
+        g_ch123_in = nx.read_gpickle(str(ch1234567_path) + '/network_files/g_ch123_in.gpickle')
+        g_ch123_out = nx.read_gpickle(str(ch1234567_path) + '/network_files/g_ch123_out.gpickle')
+        g_ch1234567_in = nx.read_gpickle(str(ch1234567_path) + '/network_files/g_ch1234567_in.gpickle')
+        g_ch1234567_out = nx.read_gpickle(str(ch1234567_path) + '/network_files/g_ch1234567_out.gpickle')
 
-        # HASTA AQUI FUNCIONA, AHORA FALTA AÑADIR START_NODE_ID Y ENDD_NODE_ID A crossing_onlypoints EN BC_OFFICIAL.PY
-        # -----------------------------------------------------------------------------
-        # CONNECT BORDER CROSSINGS WITH CH123
-        # -----------------------------------------------------------------------------
+    # This creates the tree of the ch123 graphs to find the closest nodes
+    g_in_lonlat, g_in_tree = closest_node(g_ch123_in, nodes_europe)
+    g_out_lonlat, g_out_tree = closest_node(g_ch123_out, nodes_europe)
+    g_infull_lonlat, g_infull_tree = closest_node(g_ch1234567_in, nodes_europe)
+    print('------------------------------------------------------------------------')
+
+    # -----------------------------------------------------------------------------
+    # CONNECT BORDER CROSSINGS WITH CH123
+    # -----------------------------------------------------------------------------
+    if os.path.isfile(str(ch1234567_path) + "/network_files/ch_connected_graph_bytime.gpickle") is False or out_path is None:
         print(datetime.datetime.now(),
               'Number of edges in graphs (in/out graphs) BEFORE connecting border crossings: ' + str(len(g_ch123_in.edges)) + '/' + str(len(g_ch123_out.edges)))
 
@@ -267,16 +285,16 @@ def connect_bc_funct(cut_nonelected=False, network_objects=None, data_path=None,
         # -----------------------------------------------------------------------------
         unique_nuts_gdf = nuts_merging(nuts_path)
         for index, row in unique_nuts_gdf.iterrows():
-            print(index)
             nutid = row['NUTS_ID']
             if 'CH' in nutid:
                 nut_poly = row['geometry']
                 centroid = nut_poly.centroid
+                centroid_coords = (centroid.x,centroid.y)
 
-                g_ch123_in = route_bc(None, g_ch123_in, g_ch1234567_in, nodes_europe, g_in_tree, g_in_lonlat, centroid, g_in_lonlat, g_in_tree)
+                g_ch123_in = route_bc(None, g_ch123_in, g_ch1234567_in, nodes_europe, g_in_tree, g_in_lonlat, centroid_coords, g_infull_lonlat, g_infull_tree)
 
         print(datetime.datetime.now(),
-              'Number of edges in graphs (in/out graphs) AFTER connecting border crossings: ' + str(
+              'Number of edges in graphs (in/out graphs) AFTER connecting nuts centroids: ' + str(
                   len(g_ch123_in.edges)) + '/' + str(len(g_ch123_out.edges)))
         print('------------------------------------------------------------------------')
 
@@ -284,43 +302,63 @@ def connect_bc_funct(cut_nonelected=False, network_objects=None, data_path=None,
         # as this process does not count with them
         g_ch123_connected = nx.compose(g_ch123_in, g_ch123_out)
         print(datetime.datetime.now(),
-              'Number of edges in connected graph without border crossings: ' + str(
+              'Number of edges in connected graph after merging IN and OUT graphs WITHOUT border crossings: ' + str(
                   len(g_ch123_connected.edges)))
         for index, row in crossing_onlypoints.iterrows():
-            start_node_id = row['start_node']
-            end_node_id = row['end_node_i']
-            new_id = row['new_id']
-            time = g_ch1234567[start_node_id][end_node_id]['time']
-            way_type = row['way_type']
+            try:
+                start_node_id = row['start_node']
+                end_node_id = row['end_node_i']
+                new_id = row['new_id']
+                length = row['length']
+                time = g_ch1234567[start_node_id][end_node_id]['time']
+                way_type = row['way_type']
 
-            # and save the ways, implement them into ch_123
-            g_ch123_connected.add_edge(start_node_id, end_node_id, time=time, new_id=new_id, way_type=way_type)
+                # and save the ways, implement them into ch_123
+                g_ch123_connected.add_edge(start_node_id, end_node_id, time=time, length=length, new_id=new_id, way_type=way_type)
+            except:
+                continue
+        print(datetime.datetime.now(),
+              'Number of edges in connected graph after merging IN and OUT graphs WITH border crossings: ' + str(
+                  len(g_ch123_connected.edges)))
+
+        # Last, as there are some islands in the last connected graph due to splitting of graph, connected islands:
+        components = list(nx.connected_components(g_ch123_connected))  # list because it returns a generator
+        components.sort(key=len, reverse=True)
+        longest_networks = []
+        for i in range(0, len(components)):
+            net = components[i]
+            longest_networks.append(len(net))
+            print(len(net))
+            node = random.choice(list(net))
+            g_ch123_connected = route_bc(node, g_ch123_connected, g_ch1234567_in, nodes_europe, g_in_tree, g_in_lonlat)
 
         print(datetime.datetime.now(),
-              'Number of edges in connected graph AFTER adding border crossings: ' + str(
+              'Number of edges in connected graph after connecting islands in connected graph: ' + str(
                   len(g_ch123_connected.edges)))
+
         # In case the none elected border crossings want to be deleted, activate this
         if cut_nonelected:
             g_ch123_connected = cut_nonelected_bc(g_ch123_connected, network_objects=network_objects, out_path=out_path)
 
         # Join final connected graph with eu123 graph, to complete the full network
-        g_eu123 = nx.read_gpickle(str(eu123_path) + '/network_files/eu_network_largest_graph_bytime.gpickle') #here is preferable to avoid islands as they may be far from switcherland
         g_eu123_connected = nx.compose(g_ch123_connected, g_eu123)
 
+        # REMOVE ISLANDS FROM THIS STATE GRAPH(THERE SHOULDNT BE ISLANDS, AS BOTH CH1234567 AND EU123 WERE SELECTED THE LARGEST NETWORK OF THEM
+
         # export graph and shp file of final network
-        if os.path.isfile(str(out_path) + "/network_files/ch_connected_graph_bytime.gpickle") is False and out_path:
-            nx.write_gpickle(g_eu123_connected, str(out_path) + "/network_files/eu_connected_graph_bytime.gpickle")
-            nx.write_gpickle(g_ch123_connected, str(out_path) + "/network_files/ch_connected_graph_bytime.gpickle")
+        if os.path.isfile(str(ch1234567_path) + "/network_files/ch_connected_graph_bytime.gpickle") is False and out_path:
+            nx.write_gpickle(g_eu123_connected, str(eu123_path) + "/network_files/eu_connected_graph_bytime.gpickle")
+            nx.write_gpickle(g_ch123_connected, str(ch1234567_path) + "/network_files/ch_connected_graph_bytime.gpickle")
             if os.path.isfile(str(out_path) + "/network_files/eu_connected_graph_bytime.shp") is False:
                 create_shp_largest(g_ch123_connected, nodes_europe, splitted_ways_dict, gdf,
-                                   str(out_path) + "/network_files", 'ch_connected_graph_bytime', list_nodes=None)
+                                   str(ch1234567_path) + "/network_files", 'ch_connected_graph_bytime', list_nodes=None)
                 create_shp_largest(g_eu123_connected, nodes_europe, splitted_ways_dict, gdf,
-                                   str(out_path) + "/network_files", 'eu_connected_graph_bytime', list_nodes=None)
-    else:
-        print(datetime.datetime.now(), 'Connected network graph was found.')
-        if os.path.isfile(str(out_path) + "/network_files/ch_connected_graph_bytime.shp") is False:
-            g_ch123_connected = nx.read_gpickle(str(out_path) + '/network_files/ch_connected_graph_bytime.gpickle')
-            create_shp_largest(g_ch123_connected, nodes_europe, splitted_ways_dict, gdf, str(out_path) + "/network_files", 'ch_connected_graph_bytime', list_nodes=None)
+                                   str(eu123_path) + "/network_files", 'eu_connected_graph_bytime', list_nodes=None)
+    # else:
+    #     print(datetime.datetime.now(), 'Connected network graph was found.')
+    #     if os.path.isfile(str(ch1234567_path) + "/network_files/ch_connected_graph_bytime.shp") is False:
+    #         g_ch123_connected = nx.read_gpickle(str(ch1234567_path) + '/network_files/ch_connected_graph_bytime.gpickle')
+    #         create_shp_largest(g_ch123_connected, nodes_europe, splitted_ways_dict, gdf, str(out_path) + "/network_files", 'ch_connected_graph_bytime', list_nodes=None)
 
 
     # FINALLY THIS GRAPH SHOULD BE MERGED WITH EU123
@@ -333,7 +371,7 @@ def connect_bc_funct(cut_nonelected=False, network_objects=None, data_path=None,
                            network_objects[1],
                            network_objects[2],
                            network_objects[3],
-                           network_objetcs[4],
+                           network_objects[4],
                            network_objetcs[5],
                            network_objetcs[6],
                            network_objetcs[7]

@@ -143,7 +143,6 @@ def nuts_merging(nuts_path):
 # -----------------------------------------------------------------------------
 # CREATE DICTIONARY WITH CENTROID COORDINATES AND CLOSEST NODE IN EUROPE_NETWORK
 
-
 def europe_data(network_objects, network_path, nuts_path, europe_data_path):
     print(datetime.datetime.now(), 'Europe data manipulating begins ...')
     if network_path is not None:

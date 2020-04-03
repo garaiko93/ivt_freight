@@ -804,6 +804,9 @@ def parse_network(raw_file, highway_types = 123, data_path=None, shp_file=None, 
         print('------------------------------------------------------------------------')
     elif os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
         gdf = pd.read_csv(str(out_path) + '/gdf_MTP_europe.csv')
+
+        file = open(str(out_path) + "/europe_ways_splitted_dict.pkl", 'rb')
+        splitted_ways_dict = pickle.load(file)
         print(datetime.datetime.now(), 'Csv already exists, loaded: ' + str(len(gdf)))
         print('------------------------------------------------------------------------')
 
@@ -814,6 +817,9 @@ def parse_network(raw_file, highway_types = 123, data_path=None, shp_file=None, 
     # create_graph_func(out_path, gdf, nodes_europe_2056, splitted_ways_dict)
     if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
         graph = create_graph_func(out_path, gdf, nodes_europe, splitted_ways_dict)
+        if export_files is False:
+            network_objects = [graph, gdf, nodes_europe, splitted_ways_dict]
+            return network_objects
         print(datetime.datetime.now(), 'Graph creation process finished correctly')
         print('------------------------------------------------------------------------')
     else:
@@ -821,6 +827,4 @@ def parse_network(raw_file, highway_types = 123, data_path=None, shp_file=None, 
     print('------------------------------------------------------------------------')
     print('------------------------------------------------------------------------')
 
-    if export_files is False:
-        network_objects = [graph, gdf, nodes_europe, splitted_ways_dict]
-        return network_objects
+
