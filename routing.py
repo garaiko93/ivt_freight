@@ -19,9 +19,19 @@ def rounting_funct(network_path, border_file, official_count_file, training=Fals
     else:
         print(datetime.datetime.now(), 'Directory exists.')
 
+    # Find best graph:
+    if os.path.isfile(str(network_path) + "/network_files/eu_connected_graph_bytime.gpickle") is True:
+        graph_path = str(network_path) + '/network_files/eu_connected_graph_bytime.gpickle'
+        print(datetime.datetime.now(), 'Graph loaded: eu_connected_graph_bytime')
+    elif os.path.isfile(str(network_path) + "/bc_official/eu_network_graph_with_official_bc.gpickle") is True:
+        graph_path = str(network_path) + '/bc_official/eu_network_graph_with_official_bc.gpickle'
+        print(datetime.datetime.now(), 'Graph loaded: eu_network_graph_with_official_bc')
+    else:
+        graph_path = str(network_path) + '/network_files/eu_network_largest_graph_bytime.gpickle'
+        print(datetime.datetime.now(), 'Graph loaded: eu_network_largest_graph_bytime')
 
     # Load graph from selected network to route
-    G = nx.read_gpickle(str(network_path) + "/bc_official/eu_network_graph_with_official_bc.gpickle")
+    G = nx.read_gpickle(graph_path)
     print(datetime.datetime.now(), 'Graph has: ' + str(
         len([len(c) for c in sorted(nx.connected_components(G), key=len, reverse=True)])) + ' island with '
           + str(G.number_of_nodes()) + '/' + str(G.number_of_edges()) + ' (Nnodes/Nedges)')

@@ -114,7 +114,6 @@ def nuts_merging(nuts_path):
     nuts_2010 = nuts_2010[cols]
     nuts_2006 = nuts_2006[cols]
     nuts_2003 = nuts_2003[cols]
-
     # merge all nuts from all files keeping the latest version of each one (polygon)
     nutsid_bag = []
     unique_nuts = []
@@ -138,17 +137,31 @@ def nuts_merging(nuts_path):
 
     print(datetime.datetime.now(), 'After merging the number of defined NUTS is: ' + str(len(unique_nuts_gdf)))
     return unique_nuts_gdf
+
 # -----------------------------------------------------------------------------
 # EUROPE DATA
 # -----------------------------------------------------------------------------
 # CREATE DICTIONARY WITH CENTROID COORDINATES AND CLOSEST NODE IN EUROPE_NETWORK
 
-def europe_data(network_objects, network_path, nuts_path, europe_data_path):
+def europe_data(network_objects, network_path, data_path, nuts_path, europe_data_path):
     print(datetime.datetime.now(), 'Europe data manipulating begins ...')
     if network_path is not None:
         out_path = str(network_path) + '/freight_data'
         network_files = str(network_path) + '/network_files'
-        graph_path = str(network_path) + '/bc_official/eu_network_graph_with_official_bc.gpickle'
+
+        nuts_path = str(data_path) + '/nuts_borders'
+        europe_data_path = str(data_path) + '/GQGV_2014_Mikrodaten.csv'
+
+        # Find best graph:
+        if os.path.isfile(str(network_path) + "/network_files/eu_connected_graph_bytime.gpickle") is True:
+            graph_path = str(network_path) + '/network_files/eu_connected_graph_bytime.gpickle'
+            print(datetime.datetime.now(), 'Graph loaded: eu_connected_graph_bytime')
+        elif os.path.isfile(str(network_path) + "/bc_official/eu_network_graph_with_official_bc.gpickle") is True:
+            graph_path = str(network_path) + '/bc_official/eu_network_graph_with_official_bc.gpickle'
+            print(datetime.datetime.now(), 'Graph loaded: eu_network_graph_with_official_bc')
+        else :
+            graph_path = str(network_path) + '/network_files/eu_network_largest_graph_bytime.gpickle'
+            print(datetime.datetime.now(), 'Graph loaded: eu_network_largest_graph_bytime')
 
         if not os.path.exists(str(out_path)):
             os.makedirs(str(out_path))
@@ -232,7 +245,7 @@ def europe_data(network_objects, network_path, nuts_path, europe_data_path):
         print('------------------------------------------------------------------------')
 
     # load europe OD matrix ('GQGV_2014_Mikrodaten.csv' file)
-    od_europe_df = pd.read_csv(str(europe_data_path), sep=",")
+    od_europe_df = pd.read_csv(europe_data_path, sep=",")
 
     # select relevant columns from dataframe
     od_europesum_df = od_europe_df[
@@ -275,7 +288,7 @@ def europe_data(network_objects, network_path, nuts_path, europe_data_path):
     print('------------------------------------------------------------------------')
 
     # Last filter for 2_routing
-    if os.path.isfile(str(out_path) + "/od_incorrect_DABC.csv") == True:
+    if os.path.isfile(str(out_path) + "/od_incorrect_DABC.csv") is True:
         od_incorrect_DABC = pd.read_csv(str(out_path) + "/od_incorrect_DABC.csv", encoding='latin1')
         print('Nroutes in od_incorrect_DABC: '+ str(len(od_incorrect_DABC)))
         od_incorrect_DABC.head()

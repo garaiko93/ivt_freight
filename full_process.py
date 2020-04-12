@@ -66,7 +66,6 @@ def full_process_funct(networks,
     # -------------------------------------------------------------------------------------------------------------
     #  FIND BORDER CROSSINGS
     # -------------------------------------------------------------------------------------------------------------
-
         network_objects = find_bc(network_objects=network_objects,
                                   network_path=network_path,
                                   border_file=border_file,
@@ -82,11 +81,37 @@ def full_process_funct(networks,
                                    wayid_by_cp]           7
         '''
 
-        # this needs networks eu123 and ch1234567 to be already parsed
+        # this needs networks eu123 and ch1234567 to be already parsed and eu123ch4567 merged
         connect_bc_funct(cut_nonelected=False,
                          network_objects=network_objects,
                          data_path=data_path,
                          out_path=out_path)
+
+    # -------------------------------------------------------------------------------------------------------------
+    #  MERGE NETWORKS IF THERE ARE 2 DIFFERENT NETWORKS
+    # -------------------------------------------------------------------------------------------------------------
+    # to add in the future: attribute merge_network = [folder_name, networks_to_merge**]
+
+    # network_objects = merge_networks_funct(network_objects=networkObj_list,
+    #                                        original_path=str(out_path) + '/eu123',
+    #                                        secondary_path=str(out_path) + '/ch1234567',
+    #                                        out_path=str(out_path) + '/eu123ch4567')
+
+    # -------------------------------------------------------------------------------------------------------------
+    #  DATA PREPARATION AND ROUTING
+    # -------------------------------------------------------------------------------------------------------------
+    # europe_data(network_objects=network_objects,
+    #             network_path=str(out_path) + '/eu123ch4567',
+    #             data_path=data_path,
+    #             nuts_path=nuts_path,
+    #             europe_data_path=mikrodaten)
+    #
+    #
+    # rounting_funct(network_path=network_path,
+    #                border_file=border_file,
+    #                official_count_file=official_count_file,
+    #                training=True)
+
 
     # -------------------------------------------------------------------------------------------------------------
     #  MERGE NETWORKS IF THERE ARE 2 DIFFERENT NETWORKS
@@ -116,14 +141,5 @@ def full_process_funct(networks,
 
 
     # network_objects = [G, network_objects[1], network_objects[2], network_objects[3], wayid_by_cp]
-    # network_objects = europe_data(network_objects=network_objects,
-    #                               network_path=out_path,
-    #                               nuts_path=nuts_path,
-    #                               europe_data_path=mikrodaten)
-    #
-    #
-    # rounting_funct(network_path=network_path,
-    #                border_file=border_file,
-    #                official_count_file=official_count_file,
-    #                training=True)
+
     #

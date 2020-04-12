@@ -2,15 +2,27 @@ import pandas as pd
 import geopandas as gpd
 import shapely.geometry as geo
 import networkx as nx
-import os
+import pickle
 import datetime
 
 
 def create_shp_largest(G, nodes_dict, splitted_ways_dict, gdf, out_path, filename, list_nodes=None):
+    if gdf is None:
+        gdf = pd.read_csv(str(out_path) + "/gdf_MTP_europe.csv", low_memory=False)
+    if nodes_dict is None:
+        file = open(str(out_path) + "/europe_nodes_dict4326.pkl", 'rb')
+        nodes_dict = pickle.load(file)
+        file.close()
+    if splitted_ways_dict is None:
+        file = open(str(out_path) + "/europe_ways_splitted_dict.pkl", 'rb')
+        splitted_ways_dict = pickle.load(file)
+        file.close()
+
     if list_nodes:
         g_edges = G.edges(list_nodes)
     else:
         g_edges = G.edges()
+    print('Edges in input graph before creating shp file: ' + str(len(g_edges)))
 
     g_edges_df1 = pd.DataFrame.from_records(list(g_edges), columns=["start_node_id", "end_node_id"])
     g_edges_df2 = pd.DataFrame.from_records(list(g_edges), columns=["end_node_id", "start_node_id"])

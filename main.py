@@ -6,7 +6,7 @@ import argparse
 #  my functions
 # from network_parser import parse_network
 # from create_graph import create_graph_func
-# from merge_networks import merge_networks_funct
+from merge_networks import merge_networks_funct
 # from bc_official import find_bc
 # from data_manipulating import europe_data
 # from routing import rounting_funct
@@ -36,10 +36,12 @@ networks = [
         # [raw_file, way_types, shp_file],
     # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 1234567, None, 'lie123']
     # ['C:/Users/Ion/IVT/OSM_data/alps-latest.osm.bz2', 1234567, None, 'ch1234567']
+    # ['C:/Users/Ion/IVT/OSM_data/europe-latest.osm.bz2', 1234567, None, 'ch1234567']
     # [r'C:/Users/Ion/IVT/OSM_data/liechtenstein-latest.osm.bz2', 567, None],
     # ['/cluster/scratch/gaion/alps-latest.osm.bz2', 123, '/cluster/home/gaion/freight/data/bci_polygon30k_4326.shp'],
-    # ['/cluster/scratch/gaion/alps-latest.osm.bz2', 1234567, None, 'ch1234567'],
-    ['/cluster/scratch/gaion/europe-latest.osm.bz2', 123, None, 'eu123']
+    ['/cluster/scratch/gaion/alps-latest.osm.bz2', 1234567, None, 'eu123ch4567']
+    # ['/cluster/scratch/gaion/alps-latest.osm.bz2', 1234567, None, 'eu123ch4567']
+    # ['/cluster/scratch/gaion/europe-latest.osm.bz2', 123, None, 'eu123']
                 ]
 full_process_funct(networks,
                    # border_file,
@@ -135,6 +137,10 @@ full_process_funct(networks,
 # merge_networks_funct(original_path=r'C:/Users/Ion/IVT/OSM_python/test/lie123',
 #                      secondary_path=r'C:/Users/Ion/IVT/OSM_python/test/lie4',
 #                      out_path=r'C:/Users/Ion/IVT/OSM_python/test/lie1234')
+# merge_networks_funct(None,
+#                      original_path='/cluster/home/gaion/freight/networks/eu123',
+#                      secondary_path='/cluster/home/gaion/freight/networks/ch1234567',
+#                      out_path='/cluster/home/gaion/freight/networks/eu123ch_connected')
 
 # -------------------------------------------------------------------------------------------------------------
 # FIND SWISS BORDER CROSSINGS WITH THE NETWORK

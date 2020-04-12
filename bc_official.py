@@ -50,7 +50,6 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
     # bc_path = 'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv'
     if network_path:
         out_path = str(network_path) + '/bc_official'
-        network_files = str(network_path) + '/network_files'
 
         if not os.path.exists(str(out_path)):
             os.makedirs(str(out_path))
@@ -64,7 +63,7 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
     if os.path.isfile(str(out_path) + "/bc_df.shp") is False or out_path is None:
         if out_path:
             # import shp files with network and CH border
-            europe_network = gpd.read_file(str(network_files) + '/gdf_MTP_europe.shp')
+            europe_network = gpd.read_file(str(network_path) + '/network_files/gdf_MTP_europe.shp')
         else:
             europe_network = network_objects[1]
 
