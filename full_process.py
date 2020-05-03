@@ -85,7 +85,8 @@ def full_process_funct(networks,
         connect_bc_funct(cut_nonelected=False,
                          network_objects=network_objects,
                          data_path=data_path,
-                         out_path=out_path)
+                         out_path=out_path,
+                         border_file4326=str(data_path) + '/Switzerland_OSM_polygon_4326.shp')
 
     # -------------------------------------------------------------------------------------------------------------
     #  MERGE NETWORKS IF THERE ARE 2 DIFFERENT NETWORKS
@@ -100,17 +101,17 @@ def full_process_funct(networks,
     # -------------------------------------------------------------------------------------------------------------
     #  DATA PREPARATION AND ROUTING
     # -------------------------------------------------------------------------------------------------------------
-    # europe_data(network_objects=network_objects,
-    #             network_path=str(out_path) + '/eu123ch4567',
-    #             data_path=data_path,
-    #             nuts_path=nuts_path,
-    #             europe_data_path=mikrodaten)
-    #
-    #
-    # rounting_funct(network_path=network_path,
-    #                border_file=border_file,
-    #                official_count_file=official_count_file,
-    #                training=True)
+    europe_data(network_objects=network_objects,
+                network_path=str(out_path) + '/eu123ch4567',
+                data_path=data_path,
+                nuts_path=nuts_path,
+                europe_data_path=mikrodaten)
+
+
+    rounting_funct(network_path=network_path,
+                   border_file4326=str(data_path) + '/Switzerland_OSM_polygon_4326.shp',
+                   official_count_file=official_count_file,
+                   training=False)
 
 
     # -------------------------------------------------------------------------------------------------------------

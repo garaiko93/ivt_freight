@@ -9,7 +9,7 @@ from functools import partial
 import pyproj
 from shapely.ops import transform
 import geopandas as gpd
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point, Polygon, LineString
 from progressbar import Percentage, ProgressBar, Bar, ETA
 
 
@@ -39,33 +39,34 @@ CHECK:
 
 
 def find_bc(network_path, border_file, bc_path, network_objects=None):
-    print(datetime.datetime.now(), 'Border crossing search begins ...')
     # -----------------------------------------------------------------------------
     # DEFINE OUT_PATH AND LOAD FILES
-    # -----------------------------------------------------------------------------
-    # network_path = 'C:/Users/Ion/IVT/OSM_python/merged_networks/ch1234'
-    # out_path = 'C:/Users/Ion/IVT/OSM_python/test/bc_official'
+    # # # # # -----------------------------------------------------------------------------
+    # network_path = 'C:/Users/Ion/IVT/OSM_python/networks/eu123ch4567'
+    # out_path = 'C:/Users/Ion/IVT/OSM_python/networks/eu123ch4567/bc_official'
+    #
+    # data_path = 'C:/Users/Ion/IVT/OSM_data'
+    # border_file = str(data_path) + '/Switzerland_OSM_polygon_2056.shp'
+    # official_count_file = str(data_path) + '/official_counting.csv'
+    # bc_path = str(data_path) + '/official_counting_ot.csv'
+    # nuts_path = str(data_path) + '/nuts_borders'
+    # mikrodaten = str(data_path) + '/GQGV_2014_Mikrodaten.csv'
 
     # border_file = 'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp'
     # bc_path = 'C:/Users/Ion/IVT/OSM_python/freight_data/freight/official_counting_ot.csv'
     if network_path:
         out_path = str(network_path) + '/bc_official'
+    else:
+        out_path = None
 
+    if os.path.isfile(str(out_path) + "/bc_df.shp") is False or out_path is None:
+        print(datetime.datetime.now(), 'Border crossing search begins ...')
+        # Check if directory exists and create it if not
         if not os.path.exists(str(out_path)):
             os.makedirs(str(out_path))
             print(datetime.datetime.now(), 'Directory created')
         else:
             print(datetime.datetime.now(), 'Directory exists')
-    else:
-        out_path = None
-
-
-    if os.path.isfile(str(out_path) + "/bc_df.shp") is False or out_path is None:
-        if out_path:
-            # import shp files with network and CH border
-            europe_network = gpd.read_file(str(network_path) + '/network_files/gdf_MTP_europe.shp')
-        else:
-            europe_network = network_objects[1]
 
         ch_poly = gpd.read_file(border_file)['geometry']
         ch_border = ch_poly.exterior
@@ -75,7 +76,6 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
         official_df = pd.read_csv(bc_path)
 
         print(datetime.datetime.now(), 'Nlines in ch_border: ' + str(len(ch_border)))
-        print(datetime.datetime.now(), 'Nways in europe_network: ' + str(len(europe_network)))
         print(datetime.datetime.now(), 'Nbc in official_df: ' + str(len(official_df)))
         print('------------------------------------------------------------------------')
 
@@ -83,10 +83,17 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
     # FIND WAYS THAT INTERSECT CH BORDER
     # -----------------------------------------------------------------------------
     if os.path.isfile(str(out_path) + "/crossing_onlypoints.shp") is False or out_path is None:
+        if out_path:
+            # import shp files with network and CH border
+            europe_network = gpd.read_file(str(network_path) + '/network_files/gdf_MTP_europe.shp')
+        else:
+            europe_network = network_objects[1]
+        print(datetime.datetime.now(), 'Nways in europe_network: ' + str(len(europe_network)))
         # define the line that defines the swiss border:
         # ring = LineString(list(ch_border.exterior[0].coords))
         # ring = ch_border['geometry'][0].exterior
         # ring = ch_border['geometry'][0]
+
         ring = ch_border[0]
         points_list = []
         id_list = []
@@ -94,37 +101,41 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
                            maxval=len(europe_network))
         # loops over all the ways defined in the network and keeps the coordinates and the new_id of the way crossing the ring
         print(datetime.datetime.now(), 'Searching ways from the network that intersect the Swiss border ...')
-        for i in pbar(range(len(europe_network))):
+        # for i in pbar(range(len(europe_network))):
+        for i in range(len(europe_network)):
             ls = europe_network.iloc[i]['geometry']
             sn = europe_network.iloc[i]['start_node'] #dont know why "start_node_id" column is changed automatically to 'start_node' only
             en = europe_network.iloc[i]['end_node_i'] #the same, instead of "end_node_id" the column name is only "end_node_i"
             wt = europe_network.iloc[i]['way_type']
-            point = ring.intersection(ls)
-            if point.bounds != ():
-                id = europe_network.iloc[i]['new_id']
-                try:
-                    if len(point) > 1:
-                        for j in range(0, len(point)):
-                            points_list.append([Point(point[j].x, point[j].y), id, sn, en, wt])
-                except:
-                    points_list.append([Point(point.x, point.y), id, sn, en, wt])
+            if ls:
+                point = ring.intersection(ls)
+                if point.bounds != ():
+                    id = europe_network.iloc[i]['new_id']
+                    try:
+                        if len(point) > 1:
+                            for j in range(0, len(point)):
+                                points_list.append([Point(point[j].x, point[j].y), id, sn, en, wt])
+                    except:
+                        points_list.append([Point(point.x, point.y), id, sn, en, wt])
+            # else:
+            #     print(type(ls), europe_network.iloc[i])
 
         print(datetime.datetime.now(), 'Process iterated over ' + str(len(europe_network)) + ' ways.')
         print(datetime.datetime.now(), 'Number of border crossings found in the network: ' + str(len(points_list)))
 
 
-        crossing_points_df = pd.DataFrame.from_records(points_list, columns=["geometry", "new_id", "start_node_id", "end_node_id", "way_type"])
-        ch_bc = gpd.GeoDataFrame(crossing_points_df)
+        crossing_onlypoints_df = pd.DataFrame.from_records(points_list, columns=["geometry", "new_id", "start_node_id", "end_node_id", "way_type"])
+        crossing_onlypoints_gdf = gpd.GeoDataFrame(crossing_onlypoints_df)
 
         # EXPORT found points TO FILES (csv and shp)
         if out_path is not None:
-            crossing_points_df.to_csv(str(out_path) + "/crossing_onlypoints.csv", sep=",", index=None)
-            ch_bc.to_file(str(out_path) + "/crossing_onlypoints.shp")
+            crossing_onlypoints_df.to_csv(str(out_path) + "/crossing_onlypoints.csv", sep=",", index=None)
+            crossing_onlypoints_gdf.to_file(str(out_path) + "/crossing_onlypoints.shp")
         print('------------------------------------------------------------------------')
-    else:
+    elif os.path.isfile(str(out_path) + "/bc_df.shp") is False or out_path is None:
         # CHECKPOINT: load file created before
-        ch_bc = gpd.read_file(str(out_path) + "/crossing_onlypoints.shp")
-        print(datetime.datetime.now(), 'Border crossings already found, loaded: ' + str(len(ch_bc)))
+        crossing_onlypoints_gdf = gpd.read_file(str(out_path) + "/crossing_onlypoints.shp")
+        print(datetime.datetime.now(), 'Border crossings already found, loaded: ' + str(len(crossing_onlypoints_gdf)))
         print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
@@ -133,11 +144,11 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
     if os.path.isfile(str(out_path) + "/bc_df.shp") is False or out_path is None:
         # create dictinoary with id and border crossing point from official freight data
         bc_id = {}
-        for i in range(0,len(official_df)):
+        for i in range(len(official_df)):
             nr = official_df.iloc[i]['Nr.']
             name = official_df.iloc[i]['Name']
             bc_id[nr] = name
-        len(bc_id)
+        # len(bc_id)
 
         # DROP ROWS with no data or which do not overpass an input record
         droprows=[]
@@ -158,11 +169,11 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
               str(min_freight) + '): ' + str(len(official_df)))
         print('------------------------------------------------------------------------')
 
-    # -----------------------------------------------------------------------------
-    # DEFINE COORDINATES OF OFFICIAL BORDER CROSSINGS (MANUALLY)
-    # -----------------------------------------------------------------------------
-    # Geolocate the crossing points of the freight data to later find the closest border crossings in the created network according to the name of the official data
-    # create dataframe with name of the border stations from the original data
+        # -----------------------------------------------------------------------------
+        # DEFINE COORDINATES OF OFFICIAL BORDER CROSSINGS (MANUALLY)
+        # -----------------------------------------------------------------------------
+        # Geolocate the crossing points of the freight data to later find the closest border crossings in the created network according to the name of the official data
+        # create dataframe with name of the border stations from the original data
         data = {'Nr.': list(official_df['Nr.']),
                 'Name': list(official_df['Name'])
                 }
@@ -319,8 +330,10 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
 
         # convert coordinates to 2056 coordinate system
         def geolocate(x, y):
+            # return Point(x, y)
             #change coordinates system
             point4326 = Point(x, y)
+
             project = partial(
                 pyproj.transform,
                 pyproj.Proj('epsg:4326'),
@@ -329,12 +342,12 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
             return pd.Series([point2056])
             # return point2056
 
-        crossings[['geometry']] = crossings.apply(lambda row: geolocate(row['lon'], row['lat']),axis=1)
+        crossings['geometry'] = crossings.apply(lambda row: geolocate(row['lon'], row['lat']), axis=1)
         crossings = pd.merge(official_df, crossings[['Nr.', 'geometry', 'country', 'group', 'found_bc']],
                              how='inner', on='Nr.')
 
         # this are merged to get all the freight data for each geometry point
-        print(datetime.datetime.now(), len(crossings))
+        # print(datetime.datetime.now(), len(crossings))
         print('------------------------------------------------------------------------')
 
     # -----------------------------------------------------------------------------
@@ -344,9 +357,9 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
     # Starting by creating a tree with the coordinates of all border crossings found with the official data NAMES in the previous
 
         G_lonlat = []
-        for i in range(len(ch_bc)):
-            G_lonlat.append((ch_bc.iloc[i]['geometry'].x,
-                             ch_bc.iloc[i]['geometry'].y))
+        for i in range(len(crossing_onlypoints_gdf)):
+            G_lonlat.append((crossing_onlypoints_gdf.iloc[i]['geometry'].x,
+                             crossing_onlypoints_gdf.iloc[i]['geometry'].y))
         tree = spatial.KDTree(G_lonlat)
         # droprows = []
 
@@ -359,9 +372,9 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
             nn = tree.query(point1)
             coord = G_lonlat[nn[1]]
             distance = Point(point1).distance(Point(coord))
-            for j in range(0, len(ch_bc)):
-                point2 = ch_bc.iloc[j]['geometry']
-                new_id = ch_bc.iloc[j]['new_id']
+            for j in range(len(crossing_onlypoints_gdf)):
+                point2 = crossing_onlypoints_gdf.iloc[j]['geometry']
+                new_id = crossing_onlypoints_gdf.iloc[j]['new_id']
                 # Last, for each closest crossing in the network, a grouping of the crossings in a radius of 500 m is done,
                 # so also different lines of the same way are matched with the same border crossing
                 if Point(coord).distance(point2) < 100:
@@ -369,8 +382,59 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
                     cp.append((point2.x, point2.y))
             return pd.Series([coord, distance, new_ids, cp])
 
-        crossings[['closest_bc', 'distance(m)', 'new_ids', 'cp_coords']] = crossings.apply(
-            lambda row: closest_bc(row['geometry']), axis=1)
+        crossings[['closest_bc', 'distance(m)', 'new_ids', 'cp_coords']] = crossings.apply(lambda row: closest_bc(row['geometry']), axis=1)
+
+        # Ensure there isnt the same 'new_id' for different official border crossings so it does not count double
+        # for i in range(len(crossings)):
+        #     new_ids = crossings.iloc[i]['new_ids']
+        #     for new_id in new_ids:
+        #         for j in range(len(crossings)):
+        #             new_ids2 = crossings.iloc[j]['new_ids']
+        #             if new_id in new_ids2:
+        #                 print(new_id)
+
+        # for the crossing points that are not assigned to an official bc, create a tupple called 'others'
+        new_ids_list = []
+        for i in range(len(crossings)):
+            new_ids = crossings.iloc[i]['new_ids']
+            new_ids_list.append(new_ids)
+        new_ids_flat = list(set(item for sublist in new_ids_list for item in sublist))
+        # print(len(new_ids_flat))
+
+        other_bc = []
+        found_bc = []
+        not_found =[]
+        other_coords = []
+        for i in range(len(crossing_onlypoints_gdf)):
+            new_id = crossing_onlypoints_gdf.iloc[i]['new_id']
+            coords = (crossing_onlypoints_gdf.iloc[i]['geometry'].x,
+                      crossing_onlypoints_gdf.iloc[i]['geometry'].y)
+            if new_id not in new_ids_flat:
+                other_bc.append(new_id)
+                other_coords.append(coords)
+            elif new_id in new_ids_flat:
+                found_bc.append(new_id)
+            else:
+                not_found.append(new_id)
+
+        # This values differ from the total border crossings because there are cases where the same edge crosses the border more than once, creating more than one bc
+        print(datetime.datetime.now(), 'Found border crossings assigned to an official bc: ' + str(len(found_bc)))
+        print(datetime.datetime.now(), 'Found border crossings not assigned to an official bc: ' + str(len(other_bc)))
+        print(datetime.datetime.now(), 'Bc not assigned: ' + str(len(not_found)))
+        # len(set(list(crossing_onlypoints_gdf['new_id'])))
+
+        # Add other_bc to 'crossings' as a new line
+        new_row = pd.Series({'Nr.': 0,
+                             'Name': 'others',
+                             'group': 12,
+                             'new_ids': other_bc,
+                             'cp_coords': other_coords,
+                             'found_bc': 1,
+                             'geometry': Point(other_coords[0]),
+                             'distance(m)': 0})
+
+        crossings = crossings.append(new_row, ignore_index=True)
+
         crossings = crossings.sort_values('distance(m)', ascending=False)
         # crossings = crossings[crossings['distance(m)']<6000] #filter of 6k
         # crossings = crossings[crossings['found_bc']== 1] #filter of found bc
@@ -379,8 +443,7 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
         # export crossings info to a csv and shp file
         gdf = gpd.GeoDataFrame(crossings)
         if out_path is not None:
-            crossings.to_csv(str(out_path) + "/crossings_unofficial.csv", sep=",", index=None,
-                             encoding='latin1')
+            crossings.to_csv(str(out_path) + "/crossings_unofficial.csv", sep=",", index=None, encoding='latin1')
             gdf[['Nr.', 'Name', 'geometry']].to_file(str(out_path) + "/crossings_unofficial.shp")
 
         print(datetime.datetime.now(), 'Crossing points in crossings dataframe: ' + str(len(crossings)))
@@ -397,9 +460,9 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
             o_point = crossings.iloc[i]['geometry']
             coords = crossings.iloc[i]['cp_coords']
             for id in new_ids:
-                wayid_by_cp[id] = name
                 if id in list(wayid_by_cp):
-                    rep_ids.append(id)
+                    rep_ids.append((id, name))
+                wayid_by_cp[id] = name
             # this loop stores the info in a list for a later creation of the 'bc_df' DataFrame
             for coord in coords:
                 j = coords.index(coord)
@@ -427,12 +490,13 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
 
         print(datetime.datetime.now(), 'Border crossings in bc_df: ' + str(len(bc_df)))
         print(datetime.datetime.now(), 'New_ids repeated in rep_ids: ' + str(len(rep_ids)))
+        # print(datetime.datetime.now(), 'New_ids repeated in rep_ids: ' + str(rep_ids))
         print('------------------------------------------------------------------------')
         print('------------------------------------------------------------------------')
     else:
         # CHECKPOINT: load file created before
         # bc_df = gpd.read_file(str(out_path) + "/bc_df.shp")
-        print(datetime.datetime.now(), 'Border files were already created in out_path, next step.')
+        print(datetime.datetime.now(), 'Border files already exist.')
         print('------------------------------------------------------------------------')
         print('------------------------------------------------------------------------')
 
@@ -442,7 +506,7 @@ def find_bc(network_path, border_file, bc_path, network_objects=None):
                            network_objects[2],
                            network_objects[3],
                            network_objetcs[4],
-                           ch_bc,
+                           crossing_onlypoints_gdf,
                            bc_df,
                            wayid_by_cp
                            ]

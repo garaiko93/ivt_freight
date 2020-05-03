@@ -48,10 +48,10 @@ full_process_funct(networks,
                    # official_counting,
                    # nuts_path,
                    # mikrodaten,
-                   # out_path='C:/Users/Ion/IVT/OSM_python/networks',
-                   out_path='/cluster/home/gaion/freight/networks',
-                   # data_path='C:/Users/Ion/IVT/OSM_data'
-                   data_path='/cluster/home/gaion/freight/data'
+                   out_path='C:/Users/Ion/IVT/OSM_python/networks',
+                   # out_path='/cluster/home/gaion/freight/networks',
+                   data_path='C:/Users/Ion/IVT/OSM_data'
+                   # data_path='/cluster/home/gaion/freight/data'
                 )
 
 # -------------------------------------------------------------------------------------------------------------

@@ -7,7 +7,7 @@ import os
 import datetime
 
 
-def rounting_funct(network_path, border_file, official_count_file, training=False):
+def rounting_funct(network_path, border_file4326, official_count_file, training=False):
     print(datetime.datetime.now(), 'Routing process begins ...')
 
     out_path = str(network_path) + '/routing_results'
@@ -37,7 +37,8 @@ def rounting_funct(network_path, border_file, official_count_file, training=Fals
           + str(G.number_of_nodes()) + '/' + str(G.number_of_edges()) + ' (Nnodes/Nedges)')
 
     # Load nodes dictionary from selected network
-    file = open(str(network_path) + "/network_files/europe_nodes_dict2056.pkl", 'rb')
+    # file = open(str(network_path) + "/network_files/europe_nodes_dict2056.pkl", 'rb')
+    file = open(str(network_path) + "/network_files/europe_nodes_dict4326.pkl", 'rb')
     nodes_europe_2056 = pickle.load(file)
     file.close()
     print(datetime.datetime.now(), 'Nnodes in nodes_europe_2056: ' + str(len(nodes_europe_2056)))
@@ -49,8 +50,8 @@ def rounting_funct(network_path, border_file, official_count_file, training=Fals
     print(datetime.datetime.now(), 'Nways in wayidbycp: ' + str(len(wayidbycp)))
 
     # LOAD MANIPULATED FREIGHT DATA (EU)
-    # od_europesum_df = pd.read_csv(str(network_path) + "/freight_data/od_europesum_df.csv")
-    od_europesum_df = pd.read_csv(str(network_path) + "/freight_data/od_europesum_df_test.csv")
+    od_europesum_df = pd.read_csv(str(network_path) + "/freight_data/od_europesum_df.csv")
+    # od_europesum_df = pd.read_csv(str(network_path) + "/freight_data/od_europesum_df_test.csv")
     print(datetime.datetime.now(), 'Nroutes in od_europesum_df: ' + str(len(od_europesum_df)))
 
     # This code does the routing between the o_node_id and the d_node_id in both data frames (od_europesum_df and od_chsum_df)
@@ -62,7 +63,7 @@ def rounting_funct(network_path, border_file, official_count_file, training=Fals
         new_ids = []
         if start_point != end_point:
             path = nx.astar_path(G, start_point, end_point, weight='time')
-            for i in range(0,len(path)-1):
+            for i in range(len(path)-1):
                 node1 = path[i]
                 node2 = path[i+1]
                 new_id = G[node1][node2]['new_id']
@@ -100,7 +101,8 @@ def rounting_funct(network_path, border_file, official_count_file, training=Fals
     # this is stored in the 'in' and 'out' columns of each dataframe
 
     # load swiss border shapefile
-    ch_border = gpd.read_file(border_file)['geometry'][0]
+    ch_border = gpd.read_file(border_file4326)
+    # ch_border = gpd.read_file(border_file)['geometry'][0]
     none_bc = 0
 
     def in_out_bc(start_point, end_point, border_crossing, rowname, none_bc):

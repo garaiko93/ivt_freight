@@ -810,6 +810,20 @@ def parse_network(raw_file, highway_types = 123, data_path=None, shp_file=None, 
             print(datetime.datetime.now(), 'Csv already exists, loaded: ' + str(len(gdf)))
             print('------------------------------------------------------------------------')
 
+
+        # -----------------------------------------------------------------------------
+        # TRANSFORM NODES 4326 TO 2056
+        # -----------------------------------------------------------------------------
+        # this will call the function to create the graph with the data created until here
+        # create_graph_func(out_path, gdf, nodes_europe_2056, splitted_ways_dict)
+        if os.path.isfile(str(out_path) + "/eu_network_largest_graph_bytime.gpickle") is False or export_files is False:
+            graph = create_graph_func(out_path, gdf, nodes_europe, splitted_ways_dict)
+            if export_files is False:
+                network_objects = [graph, gdf, nodes_europe, splitted_ways_dict]
+                return network_objects
+            print(datetime.datetime.now(), 'Graph creation process finished correctly')
+            print('------------------------------------------------------------------------')
+
         # -----------------------------------------------------------------------------
         # CREATE GRAPH AND FILES (shpfile, pickle, isolated files)
         # -----------------------------------------------------------------------------
@@ -827,7 +841,8 @@ def parse_network(raw_file, highway_types = 123, data_path=None, shp_file=None, 
         print('------------------------------------------------------------------------')
         print('------------------------------------------------------------------------')
     else:
-        print(datetime.datetime.now(), 'Network graph already exists in output directory.')
+        print('------------------------------------------------------------------------')
+        print(datetime.datetime.now(), 'Network graph already exists.')
         print('------------------------------------------------------------------------')
         print('------------------------------------------------------------------------')
 

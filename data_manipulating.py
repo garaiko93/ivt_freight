@@ -144,7 +144,6 @@ def nuts_merging(nuts_path):
 # CREATE DICTIONARY WITH CENTROID COORDINATES AND CLOSEST NODE IN EUROPE_NETWORK
 
 def europe_data(network_objects, network_path, data_path, nuts_path, europe_data_path):
-    print(datetime.datetime.now(), 'Europe data manipulating begins ...')
     if network_path is not None:
         out_path = str(network_path) + '/freight_data'
         network_files = str(network_path) + '/network_files'
@@ -152,41 +151,45 @@ def europe_data(network_objects, network_path, data_path, nuts_path, europe_data
         nuts_path = str(data_path) + '/nuts_borders'
         europe_data_path = str(data_path) + '/GQGV_2014_Mikrodaten.csv'
 
-        # Find best graph:
-        if os.path.isfile(str(network_path) + "/network_files/eu_connected_graph_bytime.gpickle") is True:
-            graph_path = str(network_path) + '/network_files/eu_connected_graph_bytime.gpickle'
-            print(datetime.datetime.now(), 'Graph loaded: eu_connected_graph_bytime')
-        elif os.path.isfile(str(network_path) + "/bc_official/eu_network_graph_with_official_bc.gpickle") is True:
-            graph_path = str(network_path) + '/bc_official/eu_network_graph_with_official_bc.gpickle'
-            print(datetime.datetime.now(), 'Graph loaded: eu_network_graph_with_official_bc')
-        else :
-            graph_path = str(network_path) + '/network_files/eu_network_largest_graph_bytime.gpickle'
-            print(datetime.datetime.now(), 'Graph loaded: eu_network_largest_graph_bytime')
+    if os.path.isfile(str(out_path) + '/nuts_europe_dict.pkl') is False or out_path is None:
+        print(datetime.datetime.now(), 'Europe data manipulating begins ...')
+        if network_path is not None:
+            # Find best graph:
+            if os.path.isfile(str(network_files) + "/eu_connected_graph_bytime.gpickle"):
+                graph_path = str(network_files) + '/eu_connected_graph_bytime.gpickle'
+                print(datetime.datetime.now(), 'Graph loaded: eu_connected_graph_bytime')
+            elif os.path.isfile(str(network_path) + "/bc_official/eu_network_graph_with_official_bc.gpickle"):
+                graph_path = str(network_path) + '/bc_official/eu_network_graph_with_official_bc.gpickle'
+                print(datetime.datetime.now(), 'Graph loaded: eu_network_graph_with_official_bc')
+            else:
+                graph_path = str(network_files) + '/eu_network_largest_graph_bytime.gpickle'
+                print(datetime.datetime.now(), 'Graph loaded: eu_network_largest_graph_bytime')
 
-        if not os.path.exists(str(out_path)):
-            os.makedirs(str(out_path))
-            print(datetime.datetime.now(), 'Directory created.')
+            # Check if out_path exists or create it
+            if not os.path.exists(str(out_path)):
+                os.makedirs(str(out_path))
+                print(datetime.datetime.now(), 'Directory created.')
+            else:
+                print(datetime.datetime.now(), 'Directory exists.')
+
+            # Create dictionary with nuts id and coordinates of centroid and closest node id to it
+            # IMPORT G graph with largest network
+            G = nx.read_gpickle(str(graph_path))
+
+            # # IMPORT nodes_europe
+            # file = open(str(network_files) + "/europe_nodes_dict2056.pkl", 'rb')
+            file = open(str(network_files) + "/europe_nodes_dict4326.pkl", 'rb')
+            nodes_europe_2056 = pickle.load(file)
+            file.close()
         else:
-            print(datetime.datetime.now(), 'Directory exists.')
+            out_path = None
+            G = network_objects[0]
+            nodes_europe_2056 = network_objects[2]
 
-        # Create dictionary with nuts id and coordinates of centroid and closest node id to it
-        # IMPORT G graph with largest network
-        G = nx.read_gpickle(str(graph_path))
-
-        # # IMPORT nodes_europe
-        # file = open(str(network_files) + "/europe_nodes_dict2056.pkl", 'rb')
-        file = open(str(network_files) + "/europe_nodes_dict4326.pkl", 'rb')
-        nodes_europe_2056 = pickle.load(file)
-        file.close()
-    else:
-        out_path = None
-        G = network_objects[0]
-        nodes_europe_2056 = network_objects[2]
-
-    print(datetime.datetime.now(), 'Graph has: ' + str(
-        len([len(c) for c in sorted(nx.connected_components(G), key=len, reverse=True)])) + ' island with '
-          + str(G.number_of_nodes()) + '/' + str(G.number_of_edges()) + ' (Nnodes/Nedges)')
-    print(datetime.datetime.now(), 'Nnodes in nodes_europe_2056: ' + str(len(nodes_europe_2056)))
+        print(datetime.datetime.now(), 'Graph has: ' + str(
+            len([len(c) for c in sorted(nx.connected_components(G), key=len, reverse=True)])) + ' island with '
+              + str(G.number_of_nodes()) + '/' + str(G.number_of_edges()) + ' (Nnodes/Nedges)')
+        print(datetime.datetime.now(), 'Nnodes in nodes_europe_2056: ' + str(len(nodes_europe_2056)))
 
 
     if os.path.isfile(str(out_path) + '/nuts_europe_dict.pkl') is False or out_path is None:
@@ -236,7 +239,7 @@ def europe_data(network_objects, network_path, data_path, nuts_path, europe_data
 
         print(datetime.datetime.now(), len(nuts_europe))
         print('------------------------------------------------------------------------')
-    else:
+    elif os.path.isfile(str(out_path) + "/od_europesum_df.csv") is False:
         # CHECKPOINT: load nuts dictionary
         file = open(str(out_path) + '/nuts_europe_dict.pkl', 'rb')
         nuts_europe = pickle.load(file)
@@ -244,48 +247,53 @@ def europe_data(network_objects, network_path, data_path, nuts_path, europe_data
         print(datetime.datetime.now(), 'Nnuts in nuts_europe: ' + str(len(nuts_europe)))
         print('------------------------------------------------------------------------')
 
-    # load europe OD matrix ('GQGV_2014_Mikrodaten.csv' file)
-    od_europe_df = pd.read_csv(europe_data_path, sep=",")
+    if os.path.isfile(str(out_path) + '/od_europesum_df.csv') is False or out_path is None:
+        # load europe OD matrix ('GQGV_2014_Mikrodaten.csv' file)
+        od_europe_df = pd.read_csv(europe_data_path, sep=",")
 
-    # select relevant columns from dataframe
-    od_europesum_df = od_europe_df[
-        ['OID', 'ORIGIN', 'DESTINATION', 'BORDER_CROSSING_IN', 'BORDER_CROSSING_OUT', 'KM_PERFORMANCE', 'WEIGHTING_FACTOR',
-         'DIVISOR']]
+        # select relevant columns from dataframe
+        od_europesum_df = od_europe_df[
+            ['OID', 'ORIGIN', 'DESTINATION', 'BORDER_CROSSING_IN', 'BORDER_CROSSING_OUT', 'KM_PERFORMANCE', 'WEIGHTING_FACTOR',
+             'DIVISOR']]
 
-    # add columns (o_node_id, d_node_id) to dataframe with closest node depending origin and destination NUT
-    # also creating list of NUTS ('missing_nuts') which are not defined in the dictionary nuts_europe
-    missing_nuts = []
+        # add columns (o_node_id, d_node_id) to dataframe with closest node depending origin and destination NUT
+        # also creating list of NUTS ('missing_nuts') which are not defined in the dictionary nuts_europe
+        missing_nuts = []
 
-    def od_func_eu(origin, destination, rowname):
-        try:
-            o_node_id = nuts_europe[origin][1]
-        except:
-            o_node_id = None
-            if origin not in missing_nuts:
-                missing_nuts.append(origin)
-        try:
-            d_node_id = nuts_europe[destination][1]
-        except:
-            d_node_id = None
-            if destination not in missing_nuts:
-                missing_nuts.append(destination)
+        def od_func_eu(origin, destination, rowname):
+            try:
+                o_node_id = nuts_europe[origin][1]
+            except:
+                o_node_id = None
+                if origin not in missing_nuts:
+                    missing_nuts.append(origin)
+            try:
+                d_node_id = nuts_europe[destination][1]
+            except:
+                d_node_id = None
+                if destination not in missing_nuts:
+                    missing_nuts.append(destination)
 
-        # print(datetime.datetime.now(), rowname, end="\r")
-        return pd.Series([o_node_id, d_node_id])
+            # print(datetime.datetime.now(), rowname, end="\r")
+            return pd.Series([o_node_id, d_node_id])
 
-    od_europesum_df[['o_node_id', 'd_node_id']] = od_europesum_df.apply(
-        lambda row: od_func_eu(row['ORIGIN'], row['DESTINATION'], row.name), axis=1)
+        od_europesum_df[['o_node_id', 'd_node_id']] = od_europesum_df.apply(
+            lambda row: od_func_eu(row['ORIGIN'], row['DESTINATION'], row.name), axis=1)
 
-    df = pd.DataFrame(data={"missing_nuts": missing_nuts})
-    od_europesum_df = pd.DataFrame.dropna(
-    od_europesum_df)  # in case there are missing nuts not defined in the dictionary
+        df = pd.DataFrame(data={"missing_nuts": missing_nuts})
+        od_europesum_df = pd.DataFrame.dropna(
+        od_europesum_df)  # in case there are missing nuts not defined in the dictionary
 
-    if out_path is not None:
-        df.to_csv(str(out_path) + "/missing_nuts.csv", sep=',', index=False)
-        od_europesum_df.to_csv(str(out_path) + "/od_europesum_df.csv", sep=",", index=None)
+        if out_path is not None:
+            df.to_csv(str(out_path) + "/missing_nuts.csv", sep=',', index=False)
+            od_europesum_df.to_csv(str(out_path) + "/od_europesum_df.csv", sep=",", index=None)
 
-    print(datetime.datetime.now(), 'Process of manipulating europa data finished')
-    print('------------------------------------------------------------------------')
+        print(datetime.datetime.now(), 'Process of manipulating europa data finished')
+        print('------------------------------------------------------------------------')
+    else:
+        print(datetime.datetime.now(), 'Manipulated data already exists.')
+        print('------------------------------------------------------------------------')
+
 
     # Last filter for 2_routing
     if os.path.isfile(str(out_path) + "/od_incorrect_DABC.csv") is True:
