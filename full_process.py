@@ -13,6 +13,8 @@ from bc_official import find_bc
 from data_manipulating import europe_data
 from routing import rounting_funct
 from connect_bc import connect_bc_funct
+from data_grouping import data_grouping
+
 
 def full_process_funct(networks,
                        border_file=r'C:/Users/Ion/IVT/OSM_python/switzerland/ch_bordercrossings/swiss_border/bci_path.shp',
@@ -112,6 +114,8 @@ def full_process_funct(networks,
                    border_file4326=str(data_path) + '/Switzerland_OSM_polygon_4326.shp',
                    official_count_file=official_count_file,
                    training=False)
+
+    data_grouping(network_path=network_path)
 
 
     # -------------------------------------------------------------------------------------------------------------

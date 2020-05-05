@@ -218,7 +218,8 @@ def europe_data(network_objects, network_path, data_path, nuts_path, europe_data
         pbar = ProgressBar(widgets=[Bar('>', '[', ']'), ' ',
                                             Percentage(), ' ',
                                             ETA()], maxval=len(unique_nuts_gdf))
-        for i in pbar(range(len(unique_nuts_gdf))):
+        for i in range(len(unique_nuts_gdf)):
+        # for i in pbar(range(len(unique_nuts_gdf))):
             nuts_id = unique_nuts_gdf.iloc[i]['NUTS_ID']
             polygon = unique_nuts_gdf.iloc[i]['geometry']
             centroid = (polygon.centroid.x, polygon.centroid.y)
